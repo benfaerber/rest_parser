@@ -24,6 +24,30 @@ const BODY_DELIMITER: &str = "\r\n\r\n";
 
 const AUTHORIZATION_HEADER: &str = "Authorization";
 
+pub type RestVariables = IndexMap<String, String>;
+
+#[derive(Debug, Clone, Copy)]
+pub enum RestFlavor {
+    Vscode,
+    Jetbrains,
+}
+
+impl RestFlavor {
+    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let path = path.as_ref();
+        let ext = path.extension()
+            .map(|x| x.to_str())
+            .ok_or_else(|| anyhow!("Invalid"))?;
+        
+        match ext {
+            Some(name) if name == "rest" => Ok(Self::Vscode),
+            Some(name) if name == "http" => Ok(Self::Jetbrains),
+            _ => Err(anyhow!("Cannot determine format!")),
+        }
+    }
+}
+
+
 #[derive(Debug, Clone)]
 pub struct RestRequest {
     pub name: Option<String>,
@@ -179,6 +203,8 @@ pub struct RestFormat {
     pub requests: Vec<RestRequest>,
     /// Variables used for templating
     pub variables: IndexMap<String, String>,
+    /// The specific flavor of REST format (VSCode, Jetbrains, etc.)
+    pub flavor: RestFlavor,
 }
 
 /// `httparse` does not parse bodies
@@ -197,10 +223,11 @@ fn parse_request_and_body(input: &str) -> (String, Option<String>) {
     }
 }
 
-
 impl RestFormat {
     pub fn parse_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let flavor = RestFlavor::from_path(&path)?; 
         let path = path.as_ref();
+
         let mut file = File::open(path)
             .context(format!("Error opening REST file {path:?}"))?;
 
@@ -208,12 +235,12 @@ impl RestFormat {
         file.read_to_string(&mut text)
             .context(format!("Error reading REST file {path:?}"))?;
 
-        Self::parse(&text)
+        Self::parse(&text, flavor)
     }
 
-    pub fn parse(text: &str) -> anyhow::Result<Self> {
+    pub fn parse(text: &str, flavor: RestFlavor) -> anyhow::Result<Self> {
         let (lines, variables) = parse_lines(text)?;
-        Ok(Self::from_lines(lines, variables)?)
+        Ok(Self::from_lines(lines, variables, flavor)?)
     }
 
     /// Take each parsed line (like a lex token) and
@@ -221,6 +248,7 @@ impl RestFormat {
     fn from_lines(
         lines: Vec<Line>,
         variables: IndexMap<String, String>,
+        flavor: RestFlavor,
     ) -> anyhow::Result<Self> {
         let mut requests: Vec<RestRequest> = vec![];
         let mut current_name: Option<String> = None;
@@ -259,7 +287,7 @@ impl RestFormat {
         )?;
         requests.push(request);
 
-        Ok(Self { requests, variables })
+        Ok(Self { requests, variables, flavor })
     }
 }
 
@@ -267,7 +295,8 @@ impl FromStr for RestFormat {
     type Err = anyhow::Error;
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let (lines, variables) = parse_lines(text)?;
-        Ok(Self::from_lines(lines, variables)?)
+        // TODO: Figure out flavor
+        Ok(Self::from_lines(lines, variables, RestFlavor::Vscode)?)
     }
 }
 
