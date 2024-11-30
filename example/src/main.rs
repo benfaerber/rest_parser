@@ -20,7 +20,6 @@ fn main() {
         print_request(request, index + 1);
     }
     
-    println!("\n\n");
     let vars: RestVariables = format.variables;
     print_variables(&vars);
 }
