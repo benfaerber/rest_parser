@@ -6,13 +6,10 @@
 use anyhow::{anyhow, Context};
 use indexmap::IndexMap;
 use nom::{
-    bytes::complete::{tag, take_until},
-    error::Error as NomError,
-    sequence::pair,
-    IResult,
+    bytes::complete::{tag, take_until}, character::complete::alphanumeric1, combinator::opt, error::Error as NomError, sequence::pair, IResult
 };
 use base64::{prelude::BASE64_STANDARD, Engine};
-use std::{fs::File, path::Path, io::Read, str, str::FromStr};
+use std::{fs::File, io::Read, path::Path, str::{self, FromStr}};
 use url::Url;
 
 use super::lexer::{Line, parse_lines};
@@ -26,34 +23,75 @@ const AUTHORIZATION_HEADER: &str = "Authorization";
 
 pub type RestVariables = IndexMap<String, String>;
 
-#[derive(Debug, Clone, Copy)]
+/// The specific type of REST file.
+/// They are all similar with slightly different feature sets
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RestFlavor {
     Vscode,
     Jetbrains,
+    Generic,
 }
 
 impl RestFlavor {
-    fn from_path(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let path = path.as_ref();
-        let ext = path.extension()
-            .map(|x| x.to_str())
-            .ok_or_else(|| anyhow!("Invalid"))?;
-        
-        match ext {
-            Some(name) if name == "rest" => Ok(Self::Vscode),
-            Some(name) if name == "http" => Ok(Self::Jetbrains),
-            _ => Err(anyhow!("Cannot determine format!")),
+    fn from_path(path: impl AsRef<Path>) -> Self {
+        match path.as_ref().extension() {
+            Some(ext) if ext == "http" => Self::Jetbrains,
+            Some(ext) if ext == "rest" => Self::Vscode,
+            _ => Self::Generic,
         }
     }
 }
 
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Body {
+    Text(String),
+    FromFile {
+        process_variables: bool,
+        encoding: Option<String>,
+        filepath: String 
+    },
+}
+
+const LOAD_SYMBOL: &str = "<"; 
+const VAR_SYMBOL: &str = "@"; 
+
+impl Body {
+    fn parse(input: &str) -> Self {
+        fn parse_from_file(inp: &str) -> IResult<&str, Body> {
+            let (inp, _) = tag(LOAD_SYMBOL)(inp)?;
+            
+            let (inp, at_sign) = opt(tag(VAR_SYMBOL))(inp)?;
+            let process_variables = at_sign.is_some();
+
+            let (inp, encoding) = opt(alphanumeric1)(inp)?;
+            let encoding = encoding.map(|e| e.to_string());
+
+            // A space seperates the optional encoding and the filepath 
+            let (inp, _) = tag(" ")(inp)?;
+
+            let body = Body::FromFile { 
+                process_variables,
+                encoding,
+                filepath: inp.to_string()
+            }; 
+
+            Ok(("", body))
+        } 
+
+        match parse_from_file(input) {
+            Ok((_, body)) => body,
+            _ => Body::Text(input.to_string()),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct RestRequest {
     pub name: Option<String>,
     pub url: String,
     pub query: IndexMap<String, String>,
-    pub body: Option<String>,
+    pub body: Option<Body>,
     pub method: String,
     pub headers: IndexMap<String, String>,
     pub authorization: Option<Authorization>,
@@ -65,8 +103,8 @@ impl RestRequest {
         name: Option<String>,
         raw_request: &str,
     ) -> anyhow::Result<Self> {
-        let (req_portion, body_portion) =
-            parse_request_and_body(raw_request.trim());
+        let (req_portion, raw_body_portion) =
+            parse_request_and_raw_body(raw_request.trim());
 
         // We need an empty buffer of headers (max of 64)
         let mut headers = [httparse::EMPTY_HEADER; 64];
@@ -85,8 +123,7 @@ impl RestRequest {
         let RestHeaders { headers, authorization } = RestHeaders::from_header_slice(req.headers)?;
 
         let method = req.method.unwrap_or("GET").into();
-        let body = body_portion.into();  
-
+        let body = raw_body_portion.map(|body| Body::parse(&body));
 
         Ok(Self {
             name,
@@ -207,9 +244,10 @@ pub struct RestFormat {
     pub flavor: RestFlavor,
 }
 
+
 /// `httparse` does not parse bodies
 /// We need to seperate them from the request portion
-fn parse_request_and_body(input: &str) -> (String, Option<String>) {
+fn parse_request_and_raw_body(input: &str) -> (String, Option<String>) {
     fn take_until_body(raw: &str) -> StrResult {
         take_until(BODY_DELIMITER)(raw)
     }
@@ -225,7 +263,7 @@ fn parse_request_and_body(input: &str) -> (String, Option<String>) {
 
 impl RestFormat {
     pub fn parse_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let flavor = RestFlavor::from_path(&path)?; 
+        let flavor = RestFlavor::from_path(&path); 
         let path = path.as_ref();
 
         let mut file = File::open(path)
@@ -378,7 +416,7 @@ mod test {
     }
 
     #[test]
-    fn parse_request_and_body_test() {
+    fn parse_request_and_raw_body_test() {
         let example = r#"
 POST /post?q=hello HTTP/1.1
 Host: localhost
@@ -392,7 +430,7 @@ X-Http-Method-Override: PUT
         .trim()
         .replace("\n", REQUEST_NEWLINE);
 
-        let (req, body) = parse_request_and_body(&example);
+        let (req, body) = parse_request_and_raw_body(&example);
 
         assert_eq!(
             req,
@@ -445,5 +483,33 @@ X-Http-Method-Override: PUT
             }
             _ => panic!("Should be bearer auth!"),
         }
+    }
+
+    #[test]
+    fn parse_body_test() {
+        let normal_body = "blah blah blah\nasdfasdf";
+        assert_eq!(Body::parse(normal_body), Body::Text(normal_body.to_string()));
+       
+        let file_import = "< file.txt";
+        assert_eq!(Body::parse(file_import), Body::FromFile {
+            process_variables: false,
+            encoding: None,
+            filepath: "file.txt".to_string(),
+        });
+
+        let file_import_with_vars = "<@ file.txt";
+        assert_eq!(Body::parse(file_import_with_vars), Body::FromFile {
+            process_variables: true,
+            encoding: None,
+            filepath: "file.txt".to_string(),
+        });
+
+        let file_import_with_vars_encoding = "<@latin1 file.txt";
+        assert_eq!(Body::parse(file_import_with_vars_encoding), Body::FromFile {
+            process_variables: true,
+            encoding: Some("latin1".to_string()),
+            filepath: "file.txt".to_string(),
+        });
+
     }
 }
