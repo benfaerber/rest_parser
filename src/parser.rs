@@ -111,6 +111,16 @@ impl Body {
 
         Body::Text(input.into())
     }
+
+    /// Just get the text of the body
+    /// Ignoring any saving and loading features. 
+    pub fn text(&self) -> String {
+        match self {
+            Self::Text(text) => text.clone(),
+            Self::LoadFromFile { .. } => "".into(),
+            Self::SaveToFile { text, .. } => text.clone(),
+        } 
+    }
 }
 
 #[derive(Debug, Clone)]

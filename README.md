@@ -4,9 +4,8 @@ Parse [VSCode `.rest` files](https://github.com/Huachao/vscode-restclient) and [
 
 These are common files used to integrate API testing into IDEs.
 There are multiple similar tools out there and it can be tedious to switch over.
+It is not for processing REST files only for parsing and turning the files into structured data.
 This library was created with the hope that people will be able to parse these files and convert them into better alternatives.
-
-This library could also be used for some pretty cool codegen. For example, converting a `.http` file into a `PHP` class.
 
 ## Getting Started:
 
@@ -41,9 +40,9 @@ One example is [running Javascript to transform responses](https://www.jetbrains
 - Naming requests: `# @name JsonRequest`
 - Parsing `Basic` and `Bearer` auth headers
 - Parsing query parameters
-- Parsing input from file body
+- Loading request body from a file
+- Saving response body to a file
 
 ### Unsupported
 - Transforming responses with Javascript
 - Special handling for certain requests `# @no-log`, `# @no-cookie-jar`, etc
-- Dumping requests into a file

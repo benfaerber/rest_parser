@@ -18,6 +18,7 @@ type StrResult<'a> = Result<(&'a str, &'a str), nom::Err<NomError<&'a str>>>;
 const REQUEST_DELIMITER: &str = "###";
 
 const NAME_ANNOTATION: &str = "@name";
+const COMMAND_ANNOTATION: &str = "@name";
 
 /// A single line during parsing
 /// This is the equivalent of a lex token
@@ -29,6 +30,12 @@ pub enum Line {
     /// A request name annotation:
     /// `# @name RequestName`
     Name(String),
+    /// A special command for a request
+    /// `# @no-log`
+    Command {
+        name: String,
+        params: Option<String>,
+    },
     /// A single line of a request:
     /// `POST https://example.com HTTP/1.1`
     Request(String),
@@ -45,16 +52,37 @@ fn parse_seperator(input: &str) -> IResult<&str, Option<String>> {
     Ok((input, potential_name))
 }
 
+/// A comment can start with `//` or `#`
+fn starting_comment(line: &str) -> StrResult {
+    alt((tag("//"), tag("#")))(line)
+}
+
+
 /// Attempt to parse a name annotation
 /// `# @name RequestName`
 fn parse_request_name_annotation(input: &str) -> IResult<&str, &str> {
-    let (input, _) = pair(char('#'), space0)(input)?;
+    let (input, _) = pair(starting_comment, space0)(input)?;
     let (input, _) = tag(NAME_ANNOTATION)(input)?;
     let (input, _) = pair(alt((char('='), char(' '))), space0)(input)?;
     let (input, req_name) = take_till(|c| c == ' ' || c == '\n')(input)?;
 
     Ok((input, req_name.into()))
 }
+
+
+
+/// Attempt to parse a name annotation
+/// `# @no-log`
+/// `# @connection-timeout 2 m`
+fn parse_request_special_command(input: &str) -> IResult<&str, (&str, Option<&str>)> {
+    let (input, _) = pair(starting_comment, space0)(input)?;
+    let (input, _) = tag(COMMAND_ANNOTATION)(input)?;
+    let (input, cmd_name) = take_till(|c| c == ' ' || c == '\n')(input)?;
+    let (input, params) = opt(take_till(|c| c == ' ' || c == '\n'))(input)?;
+
+    Ok((input, (cmd_name.into(), params)))
+}
+
 
 /// Parses an HTTP File variable
 /// `@my_variable = hello`
@@ -80,10 +108,6 @@ fn parse_variable_assignment(input: &str) -> IResult<&str, (&str, &str)> {
 /// A comment can start with `//` or `#`
 /// A comment cannot be mid line because it messes with URLs
 fn is_comment(line: &str) -> bool {
-    fn starting_comment(line: &str) -> StrResult {
-        alt((tag("//"), tag("#")))(line)
-    }
-
     matches!(starting_comment(line), Ok(_))
 }
 
@@ -102,6 +126,14 @@ pub fn parse_lines(
 
         if let Ok((_, name)) = parse_request_name_annotation(line) {
             lines.push(Line::Name(name.into()));
+            continue;
+        }
+
+        if let Ok((_, (name, params))) = parse_request_special_command(line) {
+            lines.push(Line::Command {
+                name: name.to_string(),
+                params: params.map(|x| x.to_string()),
+            });
             continue;
         }
 
