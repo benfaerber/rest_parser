@@ -1,6 +1,5 @@
-use std::{borrow::Cow, str::FromStr};
+use std::str::FromStr;
 use anyhow::Error;
-use indexmap::IndexMap;
 use nom::{
     bytes::{complete::tag, streaming::take_until}, character::complete::space0, IResult
 };
@@ -114,6 +113,7 @@ mod tests {
 
     #[test]
     fn test_parse_template() {
+        use indexmap::IndexMap; 
         fn var(t: &str) -> TemplatePart {
             TemplatePart::Variable(t.into())
         } 

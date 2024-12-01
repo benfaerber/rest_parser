@@ -35,10 +35,10 @@ impl CurlRenderer {
         }
     }
 
-    fn render_body(&self, opt_body: Option<Body>) -> (String, Option<String>) {
+    fn render_body(&self, opt_body: Option<Body>) -> (String, String) {
         let mut save_to = None; 
         let rendered_body = opt_body.map(|body| match body {
-            Body::Text(t) => t.render(&self.vars),
+            Body::Text(text) => text.render(&self.vars),
             Body::LoadFromFile { filepath, process_variables, .. } => self.load_body_from_file(filepath, process_variables),
             Body::SaveToFile { text, filepath } => {
                 save_to = Some(filepath.render(&self.vars));
@@ -56,7 +56,13 @@ impl CurlRenderer {
             },
             None => "".to_string()
         };
-        (out_body, save_to)
+
+        let save_cmd = match save_to {
+            Some(filename) => format!(" -o \"{filename}\""),
+            None => "".to_string(),
+        };
+
+        (out_body, save_cmd)
     }
 
     fn render_headers(&self, headers: IndexMap<String, Template>) -> String {
@@ -82,14 +88,9 @@ impl CurlRenderer {
         let headers = self.render_headers(headers);
         let method = self.render_method(method); 
         let query = self.render_query(query);
-        let (body, save_to) = self.render_body(body);
+        let (body, output) = self.render_body(body);
         let url = self.render_url(url);
         
-        let output = match save_to {
-            Some(filename) => format!(" -o \"{filename}\""),
-            None => "".to_string(),
-        };
-
         format!("curl {url}{query}{method}{output}{headers}{body}")
     }
 }
