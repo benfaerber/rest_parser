@@ -20,7 +20,6 @@ pub struct RestFormat {
     pub flavor: RestFlavor,
 }
 
-
 impl RestFormat {
     pub fn parse_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let flavor = RestFlavor::from_path(&path); 
@@ -52,7 +51,7 @@ impl RestFormat {
         let mut current_name: Option<String> = None;
         let mut current_request: String = "".into();
         let mut current_commands: IndexMap<String, Option<String>> = IndexMap::new();
-        println!("{:#?}", lines); 
+        
         for line in lines {
             match line {
                 Line::Seperator(name_opt) => {

@@ -162,7 +162,6 @@ impl RestRequest {
         let rest_headers = RestHeaders::from_header_slice(req.headers)?;
         let content_type = rest_headers.content_type(); 
         let RestHeaders { headers, authorization } = rest_headers;
-        
 
         let method = req.method.unwrap_or("GET").into();
         

@@ -1,19 +1,19 @@
 use indexmap::IndexMap;
 use nom::{
-   branch::alt,
+    branch::alt,
     bytes::complete::{tag, take_till},
     character::complete::{
         alpha1, alphanumeric1, char, newline, space0, space1,
     },
     combinator::{opt, recognize},
-    error::Error as NomError,
     multi::many0_count,
     sequence::{pair, tuple},
     IResult, Parser,
 };
 use std::str;
 
-type StrResult<'a> = Result<(&'a str, &'a str), nom::Err<NomError<&'a str>>>;
+type StrResult<'a> = IResult<&'a str, &'a str>;
+
 
 const REQUEST_DELIMITER: &str = "###";
 
@@ -25,17 +25,20 @@ const COMMAND_ANNOTATION: &str = "@";
 #[derive(Debug, Clone, PartialEq)]
 pub enum Line {
     /// A section seperator:
-    /// `### ?RequestName`
+    /// `### RequestName` or `###`
     Seperator(Option<String>),
+    
     /// A request name annotation:
     /// `# @name RequestName`
     Name(String),
+    
     /// A special command for a request
-    /// `# @no-log`
+    /// `# @no-log` or `# @timeout 300`
     Command {
         name: String,
         params: Option<String>,
     },
+
     /// A single line of a request:
     /// `POST https://example.com HTTP/1.1`
     Request(String),
@@ -57,7 +60,6 @@ fn starting_comment(line: &str) -> StrResult {
     alt((tag("//"), tag("#")))(line)
 }
 
-
 /// Attempt to parse a name annotation
 /// `# @name RequestName`
 fn parse_request_name_annotation(input: &str) -> IResult<&str, &str> {
@@ -70,11 +72,10 @@ fn parse_request_name_annotation(input: &str) -> IResult<&str, &str> {
 }
 
 
-
 /// Attempt to parse a name annotation
 /// `# @no-log`
 /// `# @connection-timeout 2 m`
-fn parse_request_special_command(input: &str) -> IResult<&str, (&str, Option<&str>)> {
+fn parse_request_command(input: &str) -> IResult<&str, (&str, Option<&str>)> {
     let (input, _) = pair(starting_comment, space0)(input)?;
     let (input, _) = tag(COMMAND_ANNOTATION)(input)?;
     let (input, cmd_name) = take_till(|c| c == ' ' || c == '\n')(input)?;
@@ -90,17 +91,18 @@ fn parse_request_special_command(input: &str) -> IResult<&str, (&str, Option<&st
 }
 
 
+pub fn parse_variable_identifier(input: &str) -> IResult<&str, &str> {
+    recognize(pair(
+        alpha1,
+        many0_count(alt((alphanumeric1, tag("_"), tag("-"), tag(".")))),
+    ))
+    .parse(input)
+}
+
+
 /// Parses an HTTP File variable
 /// `@my_variable = hello`
 fn parse_variable_assignment(input: &str) -> IResult<&str, (&str, &str)> {
-    fn parse_variable_identifier(input: &str) -> IResult<&str, &str> {
-        recognize(pair(
-            alpha1,
-            many0_count(alt((alphanumeric1, tag("_"), tag("-"), tag(".")))),
-        ))
-        .parse(input)
-    }
-
     let (input, _) = char('@')(input)?;
     let (input, id) = parse_variable_identifier(input)?;
 
@@ -135,7 +137,7 @@ pub fn parse_lines(
             continue;
         }
 
-        if let Ok((_, (name, params))) = parse_request_special_command(line) {
+        if let Ok((_, (name, params))) = parse_request_command(line) {
             lines.push(Line::Command {
                 name: name.to_string(),
                 params: params.map(|x| x.to_string()),
@@ -219,15 +221,15 @@ mod test {
     #[test]
     fn parse_request_command_test() {
         let line = "# @no-log";
-        let (_, out) = parse_request_special_command(line).unwrap();
+        let (_, out) = parse_request_command(line).unwrap();
         assert_eq!(out, ("no-log", None));
 
         let line = "# @timeout 100";
-        let (_, out) = parse_request_special_command(line).unwrap();
+        let (_, out) = parse_request_command(line).unwrap();
         assert_eq!(out, ("timeout", Some("100")));
 
         let line = "# @connection-timeout 2 m";
-        let (_, out) = parse_request_special_command(line).unwrap();
+        let (_, out) = parse_request_command(line).unwrap();
         assert_eq!(out, ("connection-timeout", Some("2 m")));
     }
 }
