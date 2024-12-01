@@ -20,7 +20,7 @@ X-Http-Method-Override: PUT
 
 
 #######
-@endpoint = post 
+@endpoint = post
 
 PUT https://httpbin.org/{{endpoint}} HTTP/1.1
 Authorization: Bearer efaxijasdfjasdfa 

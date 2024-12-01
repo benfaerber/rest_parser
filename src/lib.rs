@@ -7,4 +7,4 @@ mod template;
 pub use template::{Template, TemplatePart};
 pub use indexmap::IndexMap;
 pub use format::RestFormat;
-pub use parser::{RestRequest, RestVariables, RestFlavor};
+pub use parser::{RestRequest, RestVariables, RestFlavor, Body};

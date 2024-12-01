@@ -47,17 +47,17 @@ const LOAD_SYMBOL: &str = "<";
 const SAVE_SYMBOL: &str = ">>"; 
 const VAR_SYMBOL: &str = "@"; 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Body {
-    Text(String),
+    Text(Template),
     LoadFromFile {
         process_variables: bool,
         encoding: Option<String>,
-        filepath: String, 
+        filepath: Template, 
     },
     SaveToFile {
-        text: String,
-        filepath: String,
+        text: Template,
+        filepath: Template,
     },
 }
 
@@ -85,7 +85,7 @@ impl Body {
             let body = Body::LoadFromFile { 
                 process_variables,
                 encoding,
-                filepath: inp.to_string()
+                filepath: Template::new(&inp),
             }; 
 
             Ok(("", body))
@@ -97,8 +97,8 @@ impl Body {
             let (filepath, _) = tag(" ")(inp)?;
             
             let body = Body::SaveToFile { 
-                text: main_body.trim_end().to_string(),
-                filepath: filepath.to_string(), 
+                text: Template::new(main_body.trim_end()),
+                filepath: Template::new(filepath),
             };
             Ok(("", body)) 
         } 
@@ -111,17 +111,7 @@ impl Body {
             return body
         }
 
-        Body::Text(input.into())
-    }
-
-    /// Just get the text of the body
-    /// Ignoring any saving and loading features. 
-    pub fn text(&self) -> String {
-        match self {
-            Self::Text(text) => text.clone(),
-            Self::LoadFromFile { .. } => "".into(),
-            Self::SaveToFile { text, .. } => text.clone(),
-        } 
+        Body::Text(Template::new(input))
     }
 }
 
@@ -332,27 +322,31 @@ X-Http-Method-Override: PUT
     fn parse_body_test() {
         let content_type = "text/plain"; 
         let normal_body = "blah blah blah\nasdfasdf";
-        assert_eq!(Body::parse(normal_body, content_type), Body::Text(normal_body.to_string()));
+        fn text(t: &str) -> Body {
+            Body::Text(Template::new(t))
+        }
+
+        assert_eq!(Body::parse(normal_body, content_type), text(normal_body)); 
        
         let file_import = "< file.txt";
         assert_eq!(Body::parse(file_import, content_type), Body::LoadFromFile {
             process_variables: false,
             encoding: None,
-            filepath: "file.txt".to_string(),
+            filepath: Template::new("file.txt")
         });
 
         let file_import_with_vars = "<@ file.txt";
         assert_eq!(Body::parse(file_import_with_vars, content_type), Body::LoadFromFile {
             process_variables: true,
             encoding: None,
-            filepath: "file.txt".to_string(),
+            filepath: Template::new("file.txt")
         });
 
         let file_import_with_vars_encoding = "<@latin1 file.txt";
         assert_eq!(Body::parse(file_import_with_vars_encoding, content_type), Body::LoadFromFile {
             process_variables: true,
             encoding: Some("latin1".to_string()),
-            filepath: "file.txt".to_string(),
+            filepath: Template::new("file.txt")
         });
         
         let json_with_export = r#"{
@@ -361,10 +355,10 @@ X-Http-Method-Override: PUT
 
 >> ./cool-file.json"#;
         assert_eq!(Body::parse(json_with_export, "application/json"), Body::SaveToFile { 
-            text: r#"{
+            text: Template::new(r#"{
     "data": "my data"
-}"#.to_string(), 
-            filepath: "./cool-file.json".to_string(), 
+}"#),
+            filepath: Template::new("./cool-file.json")
         });
 
 
@@ -372,6 +366,6 @@ X-Http-Method-Override: PUT
 b=2&
 c=3
 "#;
-        assert_eq!(Body::parse(form_body, FORM_URL_ENCODED), Body::Text("a=1&b=2&c=3".into()));
+        assert_eq!(Body::parse(form_body, FORM_URL_ENCODED), text("a=1&b=2&c=3"));
     }
 }

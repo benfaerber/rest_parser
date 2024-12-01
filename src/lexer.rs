@@ -108,7 +108,7 @@ fn parse_variable_assignment(input: &str) -> IResult<&str, (&str, &str)> {
     let (input, _) = char('@')(input)?;
     let (input, id) = parse_variable_identifier(input)?;
 
-    let (input, _) = tuple((opt(space1), char('='), opt(space1)))(input)?;
+    let (input, _) = tuple((space0, char('='), space0))(input)?;
     let (input, value) = take_till(|c| c == '\n')(input)?;
     let (input, _) = newline(input)?;
 
