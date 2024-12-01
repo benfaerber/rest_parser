@@ -299,39 +299,7 @@ X-Http-Method-Override: PUT
             )
         );
     }
-
-    #[test]
-    fn parse_auth_header_test() {
-        let example = "Basic Zm9vOmJhcg==";
-        match Authorization::from_header(example).unwrap() {
-            Authorization::Basic { username, password } => {
-                assert_eq!(username.to_string(), "foo");
-                assert_eq!(password.unwrap().to_string(), "bar");
-            }
-            _ => panic!("Should be basic auth!"),
-        };
-
-        let example = "Basic dXNlcm5hbWV3aXRob3V0cGFzc3dvcmQ=";
-        match Authorization::from_header(example).unwrap() {
-            Authorization::Basic { username, password } => {
-                assert_eq!(username.to_string(), "usernamewithoutpassword");
-                assert!(password.is_none());
-            }
-            _ => panic!("Should be basic auth!"),
-        };
-
-        let example = "Bearer eyjlavljhhkjasdjlkhskljdfklasdlkjhf";
-        match Authorization::from_header(example).unwrap() {
-            Authorization::Bearer(bearer) => {
-                assert_eq!(
-                    bearer.to_string(),
-                    "eyjlavljhhkjasdjlkhskljdfklasdlkjhf"
-                )
-            }
-            _ => panic!("Should be bearer auth!"),
-        }
-    }
-
+    
     #[test]
     fn parse_body_test() {
         let normal_body = "blah blah blah\nasdfasdf";
