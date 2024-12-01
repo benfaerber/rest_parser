@@ -49,12 +49,12 @@ const VAR_SYMBOL: &str = "@";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Body {
     Text(String),
-    FromFile {
+    LoadFromFile {
         process_variables: bool,
         encoding: Option<String>,
         filepath: String, 
     },
-    SaveFile {
+    SaveToFile {
         text: String,
         filepath: String,
     }
@@ -75,7 +75,7 @@ impl Body {
             // A space seperates the optional encoding and the filepath 
             let (inp, _) = tag(" ")(inp)?;
 
-            let body = Body::FromFile { 
+            let body = Body::LoadFromFile { 
                 process_variables,
                 encoding,
                 filepath: inp.to_string()
@@ -89,8 +89,8 @@ impl Body {
             let (inp, _) = tag(SAVE_SYMBOL)(inp)?;
             let (filepath, _) = tag(" ")(inp)?;
             
-            let body = Body::SaveFile { 
-                text: main_body.to_string(), 
+            let body = Body::SaveToFile { 
+                text: main_body.trim_end().to_string(),
                 filepath: filepath.to_string(), 
             };
             Ok(("", body)) 
@@ -371,6 +371,7 @@ impl FromStr for RestFormat {
     }
 }
 
+/// The `Authorization` header
 #[derive(Debug, Clone, PartialEq)]
 pub enum Authorization {
     Bearer(String),
@@ -524,25 +525,36 @@ X-Http-Method-Override: PUT
         assert_eq!(Body::parse(normal_body), Body::Text(normal_body.to_string()));
        
         let file_import = "< file.txt";
-        assert_eq!(Body::parse(file_import), Body::FromFile {
+        assert_eq!(Body::parse(file_import), Body::LoadFromFile {
             process_variables: false,
             encoding: None,
             filepath: "file.txt".to_string(),
         });
 
         let file_import_with_vars = "<@ file.txt";
-        assert_eq!(Body::parse(file_import_with_vars), Body::FromFile {
+        assert_eq!(Body::parse(file_import_with_vars), Body::LoadFromFile {
             process_variables: true,
             encoding: None,
             filepath: "file.txt".to_string(),
         });
 
         let file_import_with_vars_encoding = "<@latin1 file.txt";
-        assert_eq!(Body::parse(file_import_with_vars_encoding), Body::FromFile {
+        assert_eq!(Body::parse(file_import_with_vars_encoding), Body::LoadFromFile {
             process_variables: true,
             encoding: Some("latin1".to_string()),
             filepath: "file.txt".to_string(),
         });
+        
+        let json_with_export = r#"{
+    "data": "my data"
+}
 
+>> ./cool-file.json"#;
+        assert_eq!(Body::parse(json_with_export), Body::SaveToFile { 
+            text: r#"{
+    "data": "my data"
+}"#.to_string(), 
+            filepath: "./cool-file.json".to_string(), 
+        });
     }
 }
