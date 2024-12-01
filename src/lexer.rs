@@ -18,7 +18,7 @@ type StrResult<'a> = Result<(&'a str, &'a str), nom::Err<NomError<&'a str>>>;
 const REQUEST_DELIMITER: &str = "###";
 
 const NAME_ANNOTATION: &str = "@name";
-const COMMAND_ANNOTATION: &str = "@name";
+const COMMAND_ANNOTATION: &str = "@";
 
 /// A single line during parsing
 /// This is the equivalent of a lex token
@@ -78,8 +78,14 @@ fn parse_request_special_command(input: &str) -> IResult<&str, (&str, Option<&st
     let (input, _) = pair(starting_comment, space0)(input)?;
     let (input, _) = tag(COMMAND_ANNOTATION)(input)?;
     let (input, cmd_name) = take_till(|c| c == ' ' || c == '\n')(input)?;
-    let (input, params) = opt(take_till(|c| c == ' ' || c == '\n'))(input)?;
+    let (input, _) = space0(input)?; 
+    let (input, params) = opt(take_till(|c| c == '\n'))(input)?;
 
+    let params = match params {
+        Some("") => None,
+        other => other,
+    };
+    
     Ok((input, (cmd_name.into(), params)))
 }
 
@@ -208,5 +214,20 @@ mod test {
 
         let line = "# a comment";
         assert!(parse_request_name_annotation(line).is_err());
+    }
+
+    #[test]
+    fn parse_request_command_test() {
+        let line = "# @no-log";
+        let (_, out) = parse_request_special_command(line).unwrap();
+        assert_eq!(out, ("no-log", None));
+
+        let line = "# @timeout 100";
+        let (_, out) = parse_request_special_command(line).unwrap();
+        assert_eq!(out, ("timeout", Some("100")));
+
+        let line = "# @connection-timeout 2 m";
+        let (_, out) = parse_request_special_command(line).unwrap();
+        assert_eq!(out, ("connection-timeout", Some("2 m")));
     }
 }

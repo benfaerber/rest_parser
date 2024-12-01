@@ -56,7 +56,7 @@ pub enum Body {
     SaveToFile {
         text: String,
         filepath: String,
-    }
+    },
 }
 
 
@@ -132,12 +132,14 @@ pub struct RestRequest {
     pub method: String,
     pub headers: IndexMap<String, String>,
     pub authorization: Option<Authorization>,
+    pub commands: IndexMap<String, Option<String>>,
 }
 
 impl RestRequest {
     /// Convert a name and a raw request into structured data 
     pub(crate) fn from_raw_request(
         name: Option<String>,
+        commands: IndexMap<String, Option<String>>,
         raw_request: &str,
     ) -> anyhow::Result<Self> {
         let (req_portion, raw_body_portion) =
@@ -174,6 +176,7 @@ impl RestRequest {
             query,
             headers,
             authorization,
+            commands,
         })
     }
 }

@@ -51,12 +51,15 @@ impl RestFormat {
         let mut requests: Vec<RestRequest> = vec![];
         let mut current_name: Option<String> = None;
         let mut current_request: String = "".into();
+        let mut current_commands: IndexMap<String, Option<String>> = IndexMap::new();
+        println!("{:#?}", lines); 
         for line in lines {
             match line {
                 Line::Seperator(name_opt) => {
                     if current_request.trim() != "" {
-                        let request= RestRequest::from_raw_request(
+                        let request = RestRequest::from_raw_request(
                             current_name,
+                            current_commands.clone(),
                             &current_request,
                         )?;
                         requests.push(request);
@@ -64,6 +67,7 @@ impl RestFormat {
 
                     current_name = None;
                     current_request = "".into();
+                    current_commands = IndexMap::new();
 
                     if let Some(name) = name_opt {
                         current_name = Some(name);
@@ -72,8 +76,8 @@ impl RestFormat {
                 Line::Name(name) => {
                     current_name = Some(name);
                 },
-                Line::Command { .. } => {
-                    continue;
+                Line::Command { name, params } => {
+                    current_commands.insert(name, params); 
                 },
                 Line::Request(req) => {
                     let next_line = format!("{req}{REQUEST_NEWLINE}");
@@ -84,6 +88,7 @@ impl RestFormat {
 
         let request = RestRequest::from_raw_request(
             current_name,
+            current_commands,
             &current_request,
         )?;
         requests.push(request);
