@@ -35,32 +35,37 @@ impl CurlRenderer {
         }
     }
 
-    fn render_body(&self, opt_body: Option<Body>) -> String {
-        let map_body = opt_body.map(|body| match body {
+    fn render_body(&self, opt_body: Option<Body>) -> (String, Option<String>) {
+        let mut save_to = None; 
+        let rendered_body = opt_body.map(|body| match body {
             Body::Text(t) => t.render(&self.vars),
             Body::LoadFromFile { filepath, process_variables, .. } => self.load_body_from_file(filepath, process_variables),
-            Body::SaveToFile { text, .. } => text.render(&self.vars),
+            Body::SaveToFile { text, filepath } => {
+                save_to = Some(filepath.render(&self.vars));
+                text.render(&self.vars)
+            },
         });
-        
-        let body_cmd = match map_body {
-            Some(b) => {
-                let encoded_body = b
+       
+        let out_body = match rendered_body {
+            Some(body_text) => {
+                let encoded_body = body_text
                     .replace("\r\n", "")
+                    .replace("\n", "")
                     .replace("\"", "\\\"");
                 format!(" -d \"{}\"", encoded_body)
             },
             None => "".to_string()
         };
-
-        body_cmd
+        (out_body, save_to)
     }
 
     fn render_headers(&self, headers: IndexMap<String, Template>) -> String {
-        headers
+        let all_headers = headers
             .iter()
             .map(|(k, v)| format!("-H \"{}: {}\"", k, v.render(&self.vars)))
             .collect::<Vec<String>>()
-            .join(" ")
+            .join(" ");
+        format!(" {all_headers}")
     }
 
     fn render_url(&self, url: Template) -> String {
@@ -69,18 +74,23 @@ impl CurlRenderer {
 
     fn render_method(&self, method: Template) -> String {
         let method = method.render(&self.vars);
-        format!("-X {method}")
+        format!(" -X {method}")
     }
 
     fn render_request(&self, req: RestRequest) -> String {
-        let headers = self.render_headers(req.headers);
-        let method = self.render_method(req.method); 
-        let query = self.render_query(req.query);
-        let body_cmd = self.render_body(req.body);
-        let url = self.render_url(req.url);
+        let RestRequest { headers, method, query, body, url, .. } = req; 
+        let headers = self.render_headers(headers);
+        let method = self.render_method(method); 
+        let query = self.render_query(query);
+        let (body, save_to) = self.render_body(body);
+        let url = self.render_url(url);
+        
+        let output = match save_to {
+            Some(filename) => format!(" -o \"{filename}\""),
+            None => "".to_string(),
+        };
 
-        let cmd = format!("curl {url}{query} {method} {headers}{body_cmd}");
-        cmd
+        format!("curl {url}{query}{method}{output}{headers}{body}")
     }
 }
 
