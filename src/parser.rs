@@ -6,7 +6,7 @@
 use anyhow::{anyhow, Context};
 use indexmap::IndexMap;
 use nom::{
-    bytes::complete::{tag, take_until}, character::complete::alphanumeric1, combinator::opt, error::Error as NomError, sequence::pair, IResult
+    bytes::{complete::tag, streaming::take_until}, character::complete::alphanumeric1, combinator::opt, error::Error as NomError, sequence::pair, IResult
 };
 use base64::{prelude::BASE64_STANDARD, Engine};
 use std::{fs::File, io::Read, path::Path, str::{self, FromStr}};
@@ -42,6 +42,9 @@ impl RestFlavor {
     }
 }
 
+const LOAD_SYMBOL: &str = "<"; 
+const SAVE_SYMBOL: &str = ">>"; 
+const VAR_SYMBOL: &str = "@"; 
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Body {
@@ -49,12 +52,14 @@ pub enum Body {
     FromFile {
         process_variables: bool,
         encoding: Option<String>,
-        filepath: String 
+        filepath: String, 
     },
+    SaveFile {
+        text: String,
+        filepath: String,
+    }
 }
 
-const LOAD_SYMBOL: &str = "<"; 
-const VAR_SYMBOL: &str = "@"; 
 
 impl Body {
     fn parse(input: &str) -> Self {
@@ -77,12 +82,29 @@ impl Body {
             }; 
 
             Ok(("", body))
+        }
+
+        fn parse_save_file(inp: &str) -> IResult<&str, Body> {
+            let (inp, main_body) = take_until(SAVE_SYMBOL)(inp)?;
+            let (inp, _) = tag(SAVE_SYMBOL)(inp)?;
+            let (filepath, _) = tag(" ")(inp)?;
+            
+            let body = Body::SaveFile { 
+                text: main_body.to_string(), 
+                filepath: filepath.to_string(), 
+            };
+            Ok(("", body)) 
         } 
 
-        match parse_from_file(input) {
-            Ok((_, body)) => body,
-            _ => Body::Text(input.to_string()),
+        if let Ok((_, body)) = parse_from_file(input) {
+            return body
         }
+
+        if let Ok((_, body)) = parse_save_file(input) {
+            return body
+        }
+
+        Body::Text(input.into())
     }
 }
 
@@ -244,12 +266,23 @@ pub struct RestFormat {
     pub flavor: RestFlavor,
 }
 
-
 /// `httparse` does not parse bodies
 /// We need to seperate them from the request portion
 fn parse_request_and_raw_body(input: &str) -> (String, Option<String>) {
-    fn take_until_body(raw: &str) -> StrResult {
-        take_until(BODY_DELIMITER)(raw)
+    fn take_until_body(raw: &str) -> IResult<&str, String> {
+        let (raw, (init_body, rest)) = pair(
+            take_until(BODY_DELIMITER),
+            opt(pair(tag(SAVE_SYMBOL), take_until(BODY_DELIMITER)))
+        )(raw)?;
+
+        let addition = match rest {
+            Some((a, b)) => format!("{a}{b}"),
+            None => "".to_string()
+        };
+
+        let full_body = format!("{init_body}{addition}");
+
+        Ok((raw, full_body))  
     }
 
     match take_until_body(input) {

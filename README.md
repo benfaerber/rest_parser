@@ -41,6 +41,7 @@ One example is [running Javascript to transform responses](https://www.jetbrains
 - Naming requests: `# @name JsonRequest`
 - Parsing `Basic` and `Bearer` auth headers
 - Parsing query parameters
+- Parsing input from file body
 
 ### Unsupported
 - Transforming responses with Javascript
