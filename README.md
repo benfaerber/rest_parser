@@ -7,7 +7,7 @@ It is not for processing REST files and sending requests only for parsing and tu
 This library was created with the hope that people will be able to parse these files and convert them into alternate formats (HURL, Slumber, Python Requests, etc).
 There are multiple similar file formats out there and it can be tedious to switch over.
 
-Check out [rest_to_curl](rest_to_curl/main.rs) for an example usecase! 
+Check out [rest_to_curl](https://github.com/benfaerber/rest_parser/blob/master/rest_to_curl/src/main.rs) for an example usecase!
 
 ## Getting Started:
 
