@@ -1,4 +1,5 @@
-use rest_parser::{Body, IndexMap, RestFormat, RestRequest, RestVariables, Template, TemplatePart};
+use rest_parser::{Body, RestFormat, RestRequest, RestVariables};
+use rest_parser::template::{Template, TemplateMap, TemplatePart};
 use std::fs;
 
 struct CurlRenderer {
@@ -11,8 +12,7 @@ impl CurlRenderer {
         Self { vars }
     }
 
-
-    fn render_query(&self, query: IndexMap<String, Template>) -> String {
+    fn render_query(&self, query: TemplateMap) -> String {
         let params = query.iter()
             .map(|(k, v)| format!("{}={}", k, self.render_template(v)))
             .collect::<Vec<String>>()
@@ -46,27 +46,23 @@ impl CurlRenderer {
                 self.render_template(&text)
             },
         });
-       
-        let out_body = match rendered_body {
-            Some(body_text) => {
-                let encoded_body = body_text
-                    .replace("&\r\n", "")
-                    .replace("\n", "")
-                    .replace("\"", "\\\"");
-                format!(" -d \"{}\"", encoded_body)
-            },
-            None => "".to_string()
-        };
 
-        let save_cmd = match save_to {
-            Some(filename) => format!(" -o \"{filename}\""),
-            None => "".to_string(),
-        };
+        let out_body = rendered_body.map(|body_text| {
+            let encoded_body = body_text
+                .replace("&\r\n", "")
+                .replace("\n", "")
+                .replace("\"", "\\\"");
+            format!(" -d \"{}\"", encoded_body)
+        }).unwrap_or("".into());
+
+        let save_cmd = save_to
+            .map(|filename| format!(" -o \"{filename}\""))
+            .unwrap_or("".into());
 
         (out_body, save_cmd)
     }
 
-    fn render_headers(&self, headers: IndexMap<String, Template>) -> String {
+    fn render_headers(&self, headers: TemplateMap) -> String {
         let all_headers = headers
             .iter()
             .map(|(k, v)| format!("-H \"{}: {}\"", k, self.render_template(v)))
@@ -105,6 +101,7 @@ impl CurlRenderer {
         let headers = self.render_headers(headers);
         let method = self.render_method(method); 
         let query = self.render_query(query);
+        println!("{:?}", body); 
         let (body, output) = self.render_body(body);
         let url = self.render_url(url);
 
@@ -115,13 +112,11 @@ impl CurlRenderer {
 
 fn main() {
     let test_file = "../test_data/http_bin.http";
-    let rest = RestFormat::parse_file(test_file).unwrap(); 
+    let RestFormat { requests, variables, .. }= RestFormat::parse_file(test_file).unwrap(); 
   
-    let renderer = CurlRenderer::new(
-        Some(rest.variables.clone())
-    );
+    let renderer = CurlRenderer::new(Some(variables));
 
-    for req in rest.requests {
+    for req in requests {
         let name = req.name.clone();
         let cmd = renderer.render_request(req);
         println!("{}", name.unwrap_or("Request".to_string()));

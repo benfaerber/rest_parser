@@ -8,6 +8,8 @@ use crate::RestVariables;
 use super::lexer::parse_variable_identifier;
 use std::fmt;
 
+pub type TemplateMap = indexmap::IndexMap<String, Template>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TemplatePart {
     Text(String),
