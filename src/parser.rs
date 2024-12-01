@@ -9,15 +9,13 @@ use nom::{
     bytes::{complete::tag, streaming::take_until}, character::complete::alphanumeric1, combinator::opt, error::Error as NomError, sequence::pair, IResult
 };
 use base64::{prelude::BASE64_STANDARD, Engine};
-use std::{fs::File, io::Read, path::Path, str::{self, FromStr}};
+use std::{path::Path, str::{self, FromStr}};
 use url::Url;
-
-use super::lexer::{Line, parse_lines};
 
 type StrResult<'a> = Result<(&'a str, &'a str), nom::Err<NomError<&'a str>>>;
 
-const REQUEST_NEWLINE: &str = "\r\n";
-const BODY_DELIMITER: &str = "\r\n\r\n";
+pub(crate) const REQUEST_NEWLINE: &str = "\r\n";
+pub(crate) const BODY_DELIMITER: &str = "\r\n\r\n";
 
 const AUTHORIZATION_HEADER: &str = "Authorization";
 
@@ -33,7 +31,7 @@ pub enum RestFlavor {
 }
 
 impl RestFlavor {
-    fn from_path(path: impl AsRef<Path>) -> Self {
+    pub(crate) fn from_path(path: impl AsRef<Path>) -> Self {
         match path.as_ref().extension() {
             Some(ext) if ext == "http" => Self::Jetbrains,
             Some(ext) if ext == "rest" => Self::Vscode,
@@ -121,7 +119,7 @@ pub struct RestRequest {
 
 impl RestRequest {
     /// Convert a name and a raw request into structured data 
-    fn from_raw_request(
+    pub(crate) fn from_raw_request(
         name: Option<String>,
         raw_request: &str,
     ) -> anyhow::Result<Self> {
@@ -255,17 +253,6 @@ impl FromStr for RestUrl {
     }
 }
 
-/// A basic representaion of the REST format
-#[derive(Debug, Clone)]
-pub struct RestFormat {
-    /// A list of recipes
-    pub requests: Vec<RestRequest>,
-    /// Variables used for templating
-    pub variables: IndexMap<String, String>,
-    /// The specific flavor of REST format (VSCode, Jetbrains, etc.)
-    pub flavor: RestFlavor,
-}
-
 /// `httparse` does not parse bodies
 /// We need to seperate them from the request portion
 fn parse_request_and_raw_body(input: &str) -> (String, Option<String>) {
@@ -294,82 +281,6 @@ fn parse_request_and_raw_body(input: &str) -> (String, Option<String>) {
     }
 }
 
-impl RestFormat {
-    pub fn parse_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let flavor = RestFlavor::from_path(&path); 
-        let path = path.as_ref();
-
-        let mut file = File::open(path)
-            .context(format!("Error opening REST file {path:?}"))?;
-
-        let mut text = String::new();
-        file.read_to_string(&mut text)
-            .context(format!("Error reading REST file {path:?}"))?;
-
-        Self::parse(&text, flavor)
-    }
-
-    pub fn parse(text: &str, flavor: RestFlavor) -> anyhow::Result<Self> {
-        let (lines, variables) = parse_lines(text)?;
-        Ok(Self::from_lines(lines, variables, flavor)?)
-    }
-
-    /// Take each parsed line (like a lex token) and
-    /// convert it to the REST format
-    fn from_lines(
-        lines: Vec<Line>,
-        variables: IndexMap<String, String>,
-        flavor: RestFlavor,
-    ) -> anyhow::Result<Self> {
-        let mut requests: Vec<RestRequest> = vec![];
-        let mut current_name: Option<String> = None;
-        let mut current_request: String = "".into();
-        for line in lines {
-            match line {
-                Line::Seperator(name_opt) => {
-                    if current_request.trim() != "" {
-                        let request= RestRequest::from_raw_request(
-                            current_name,
-                            &current_request,
-                        )?;
-                        requests.push(request);
-                    }
-
-                    current_name = None;
-                    current_request = "".into();
-
-                    if let Some(name) = name_opt {
-                        current_name = Some(name);
-                    }
-                }
-                Line::Name(name) => {
-                    current_name = Some(name);
-                }
-                Line::Request(req) => {
-                    let next_line = format!("{req}{REQUEST_NEWLINE}");
-                    current_request.push_str(&next_line);
-                }
-            }
-        }
-
-        let request = RestRequest::from_raw_request(
-            current_name,
-            &current_request,
-        )?;
-        requests.push(request);
-
-        Ok(Self { requests, variables, flavor })
-    }
-}
-
-impl FromStr for RestFormat {
-    type Err = anyhow::Error;
-    fn from_str(text: &str) -> Result<Self, Self::Err> {
-        let (lines, variables) = parse_lines(text)?;
-        // TODO: Figure out flavor
-        Ok(Self::from_lines(lines, variables, RestFlavor::Vscode)?)
-    }
-}
 
 /// The `Authorization` header
 #[derive(Debug, Clone, PartialEq)]
