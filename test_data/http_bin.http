@@ -1,5 +1,4 @@
 @HOST = http://httpbin.org
-
 ### SimpleGet
 
 GET {{HOST}}/get HTTP/1.1
@@ -8,6 +7,9 @@ GET {{HOST}}/get HTTP/1.1
 
 ###
 # @name JsonPost
+@FIRST=Joe
+@LAST=Smith
+@FULL={{FIRST}} {{LAST}}
 
 POST {{HOST}}/post?hello=123 HTTP/1.1
 Authorization: Basic Zm9vOmJhcg==
@@ -15,22 +17,21 @@ Content-Type: application/json
 X-Http-Method-Override: PUT
 
 {
-    "data": "my data"
+    "data": "my data", 
+    "name": "{{FULL}}"
 }
 
 
 #######
-@endpoint = post
+@ENDPOINT = post
 
-PUT https://httpbin.org/{{endpoint}} HTTP/1.1
+POST https://httpbin.org/{{ENDPOINT}} HTTP/1.1
 Authorization: Bearer efaxijasdfjasdfa 
 Content-Type: application/x-www-form-urlencoded
 My-Header: hello
 Other-Header: goodbye
 
-a=b&c=d
-
->> ../test_data/output.json
+first={{FIRST}}&last={{LAST}}&full={{FULL}}
 
 ### Pet.json
 

@@ -139,7 +139,7 @@ mod tests {
         let render = template.render(&vars); 
         assert_eq!(render, "hello Joe! swag".to_string());
 
-        let line = "{{name}}";
+        let line = "{{ name}}";
         let got = Template::from_str(line).unwrap();
         assert_eq!(got.parts, vec![
             var("name"),

@@ -76,7 +76,8 @@ impl CurlRenderer {
     }
 
     fn render_url(&self, url: Template) -> String {
-        self.render_template(&url) 
+        let rendered = self.render_template(&url); 
+        format!("\"{rendered}\"")    
     }
 
     fn render_method(&self, method: Template) -> String {
@@ -86,7 +87,7 @@ impl CurlRenderer {
 
     fn render_variables(&self) -> String {
         let all_vars = self.vars.iter().map(|(k, v)| {
-            format!("{}={}", k, self.render_template(v)) 
+            format!("{}=\"{}\"", k, self.render_template(v)) 
         }).collect::<Vec<String>>().join("; ");
         format!("{all_vars}; ")
     }
@@ -106,7 +107,7 @@ impl CurlRenderer {
         let query = self.render_query(query);
         let (body, output) = self.render_body(body);
         let url = self.render_url(url);
-        
+
         format!("{variables}curl {url}{query}{method}{output}{headers}{body}")
     }
 }
