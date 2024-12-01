@@ -8,6 +8,8 @@ use std::str;
 
 const AUTHORIZATION_HEADER: &str = "Authorization";
 
+const CONTENT_TYPE: &str = "Content-Type";
+
 pub(crate) struct RestHeaders {
     pub(crate) authorization: Option<Authorization>,
     pub(crate) headers: IndexMap<String, String>
@@ -51,6 +53,12 @@ impl RestHeaders {
             headers,
             authorization,
         })
+    }
+
+    pub(crate) fn content_type(&self) -> String {
+        self.headers.get(CONTENT_TYPE)
+            .unwrap_or(&"unknown".into())
+            .to_string() 
     }
 }
 

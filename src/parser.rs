@@ -18,6 +18,7 @@ type StrResult<'a> = Result<(&'a str, &'a str), nom::Err<NomError<&'a str>>>;
 pub(crate) const REQUEST_NEWLINE: &str = "\r\n";
 pub(crate) const BODY_DELIMITER: &str = "\r\n\r\n";
 
+const FORM_URL_ENCODED: &str = "application/x-www-form-urlencoded";
 
 pub type RestVariables = IndexMap<String, String>;
 
@@ -60,7 +61,13 @@ pub enum Body {
 
 
 impl Body {
-    fn parse(input: &str) -> Self {
+    fn parse(input: &str, content_type: &str) -> Self {
+        let input = if content_type == FORM_URL_ENCODED {
+            &input.replace("\r\n", "").replace("\n", "")
+        } else {
+            input
+        };
+
         fn parse_from_file(inp: &str) -> IResult<&str, Body> {
             let (inp, _) = tag(LOAD_SYMBOL)(inp)?;
             
@@ -140,10 +147,14 @@ impl RestRequest {
             .ok_or(anyhow!("There is no path for this request!"))?;
 
         let RestUrl { url, query } = RestUrl::from_str(path)?;
-        let RestHeaders { headers, authorization } = RestHeaders::from_header_slice(req.headers)?;
+        let rest_headers = RestHeaders::from_header_slice(req.headers)?;
+        let content_type = rest_headers.content_type(); 
+        let RestHeaders { headers, authorization } = rest_headers;
+        
 
         let method = req.method.unwrap_or("GET").into();
-        let body = raw_body_portion.map(|body| Body::parse(&body));
+        
+        let body = raw_body_portion.map(|body| Body::parse(&body, &content_type));
 
         Ok(Self {
             name,
@@ -302,25 +313,26 @@ X-Http-Method-Override: PUT
     
     #[test]
     fn parse_body_test() {
+        let content_type = "text/plain"; 
         let normal_body = "blah blah blah\nasdfasdf";
-        assert_eq!(Body::parse(normal_body), Body::Text(normal_body.to_string()));
+        assert_eq!(Body::parse(normal_body, content_type), Body::Text(normal_body.to_string()));
        
         let file_import = "< file.txt";
-        assert_eq!(Body::parse(file_import), Body::LoadFromFile {
+        assert_eq!(Body::parse(file_import, content_type), Body::LoadFromFile {
             process_variables: false,
             encoding: None,
             filepath: "file.txt".to_string(),
         });
 
         let file_import_with_vars = "<@ file.txt";
-        assert_eq!(Body::parse(file_import_with_vars), Body::LoadFromFile {
+        assert_eq!(Body::parse(file_import_with_vars, content_type), Body::LoadFromFile {
             process_variables: true,
             encoding: None,
             filepath: "file.txt".to_string(),
         });
 
         let file_import_with_vars_encoding = "<@latin1 file.txt";
-        assert_eq!(Body::parse(file_import_with_vars_encoding), Body::LoadFromFile {
+        assert_eq!(Body::parse(file_import_with_vars_encoding, content_type), Body::LoadFromFile {
             process_variables: true,
             encoding: Some("latin1".to_string()),
             filepath: "file.txt".to_string(),
@@ -331,11 +343,18 @@ X-Http-Method-Override: PUT
 }
 
 >> ./cool-file.json"#;
-        assert_eq!(Body::parse(json_with_export), Body::SaveToFile { 
+        assert_eq!(Body::parse(json_with_export, "application/json"), Body::SaveToFile { 
             text: r#"{
     "data": "my data"
 }"#.to_string(), 
             filepath: "./cool-file.json".to_string(), 
         });
+
+
+        let form_body = r#"a=1&
+b=2&
+c=3
+"#;
+        assert_eq!(Body::parse(form_body, FORM_URL_ENCODED), Body::Text("a=1&b=2&c=3".into()));
     }
 }
