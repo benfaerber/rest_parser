@@ -6,6 +6,9 @@ use std::path::Path;
 use anyhow::Context;
 use indexmap::IndexMap;
 
+use crate::template::Template;
+use crate::RestVariables;
+
 use super::lexer::{Line, parse_lines};
 use super::parser::{RestRequest, RestFlavor, REQUEST_NEWLINE};
 
@@ -15,7 +18,7 @@ pub struct RestFormat {
     /// A list of recipes
     pub requests: Vec<RestRequest>,
     /// Variables used for templating
-    pub variables: IndexMap<String, String>,
+    pub variables: IndexMap<String, Template>,
     /// The specific flavor of REST format (VSCode, Jetbrains, etc.)
     pub flavor: RestFlavor,
 }
@@ -44,14 +47,14 @@ impl RestFormat {
     /// convert it to the REST format
     fn from_lines(
         lines: Vec<Line>,
-        variables: IndexMap<String, String>,
+        variables: RestVariables, 
         flavor: RestFlavor,
     ) -> anyhow::Result<Self> {
         let mut requests: Vec<RestRequest> = vec![];
         let mut current_name: Option<String> = None;
         let mut current_request: String = "".into();
         let mut current_commands: IndexMap<String, Option<String>> = IndexMap::new();
-        
+       
         for line in lines {
             match line {
                 Line::Seperator(name_opt) => {

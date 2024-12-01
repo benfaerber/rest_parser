@@ -1,0 +1,7 @@
+[package]
+name = "rest_to_curl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rest_parser = { path="../" }

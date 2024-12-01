@@ -4,6 +4,8 @@ use indexmap::IndexMap;
 use nom::{
     bytes::{complete::tag, streaming::take_until}, character::complete::space0, IResult
 };
+use crate::RestVariables;
+
 use super::lexer::parse_variable_identifier;
 use std::fmt;
 
@@ -33,12 +35,12 @@ impl Template {
 
     /// Takes a variable context and renders a template
     /// Useful if your application doesn't require variables and you want them rendered now
-    pub fn render(&self, variables: &IndexMap<String, String>) -> String {
+    pub fn render(&self, variables: &RestVariables) -> String {
         let mut built = "".to_string(); 
         for part in &self.parts {
             built += match part {
                 TemplatePart::Variable(name) => match variables.get(name) {
-                    Some(value) => value.as_str(),
+                    Some(value) => value.raw.as_str(),
                     None => "",
                 },
                 TemplatePart::Text(text) => text.as_str(),
@@ -128,9 +130,9 @@ mod tests {
             text("! swag"), 
         ]);
 
-        let vars: IndexMap<String, String> = {
+        let vars: IndexMap<String, Template> = {
             let mut m = IndexMap::new();
-            m.insert("name".into(), "Joe".into());
+            m.insert("name".into(), Template::new("Joe"));
             m
         }; 
         

@@ -22,7 +22,7 @@ pub(crate) const BODY_DELIMITER: &str = "\r\n\r\n";
 
 const FORM_URL_ENCODED: &str = "application/x-www-form-urlencoded";
 
-pub type RestVariables = IndexMap<String, String>;
+pub type RestVariables = IndexMap<String, Template>;
 
 /// The specific type of REST file.
 /// They are all similar with slightly different feature sets

@@ -12,6 +12,8 @@ use nom::{
 };
 use std::str;
 
+use crate::{template::Template, RestVariables};
+
 type StrResult<'a> = IResult<&'a str, &'a str>;
 
 
@@ -122,9 +124,9 @@ fn is_comment(line: &str) -> bool {
 /// Parse an input string line by line
 pub fn parse_lines(
     input: &str,
-) -> anyhow::Result<(Vec<Line>, IndexMap<String, String>)> {
+) -> anyhow::Result<(Vec<Line>, RestVariables)> {
     let mut lines: Vec<Line> = vec![];
-    let mut variables: IndexMap<String, String> = IndexMap::new();
+    let mut variables: IndexMap<String, Template> = IndexMap::new();
     for line in input.trim().lines() {
         let line = &format!("{line}\n");
         if let Ok((_, seperator_name)) = parse_seperator(line) {
@@ -152,7 +154,7 @@ pub fn parse_lines(
         }
 
         if let Ok((_, (key, val))) = parse_variable_assignment(line) {
-            variables.insert(key.into(), val.into());
+            variables.insert(key.into(), Template::new(val));
             continue;
         }
 

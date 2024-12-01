@@ -1,0 +1,31 @@
+@HOST = http://httpbin.org
+
+### SimpleGet
+
+GET {{HOST}}/get HTTP/1.1
+
+/// Another comment
+
+###
+# @name JsonPost
+
+POST {{HOST}}/post?hello=123 HTTP/1.1
+Authorization: Basic Zm9vOmJhcg==
+Content-Type: application/json
+X-Http-Method-Override: PUT
+
+{
+    "data": "my data"
+}
+
+
+#######
+@endpoint = post 
+
+PUT https://httpbin.org/{{endpoint}} HTTP/1.1
+Authorization: Bearer efaxijasdfjasdfa 
+Content-Type: application/x-www-form-urlencoded
+My-Header: hello
+Other-Header: goodbye
+
+a=b&c=d
