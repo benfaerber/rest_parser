@@ -1,13 +1,14 @@
-use std::str::FromStr;
+use std::{borrow::Cow, str::FromStr};
 use anyhow::Error;
 use indexmap::IndexMap;
 use nom::{
     bytes::{complete::tag, streaming::take_until}, character::complete::space0, IResult
 };
 use super::lexer::parse_variable_identifier;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
-enum TemplatePart {
+pub enum TemplatePart {
     Text(String),
     Variable(String),
 }
@@ -16,19 +17,25 @@ const VARIABLE_START: &str = "{{";
 const VARIABLE_END: &str = "}}";
 
 #[derive(Debug, Clone, PartialEq)]
-struct Template(Vec<TemplatePart>);
+pub struct Template {
+    pub parts: Vec<TemplatePart>,
+    pub raw: String,
+}
 
 impl Template {
     pub fn new(value: &str) -> Self {
         Self::from_str(value)
-            .unwrap_or(Template(vec![]))
+            .unwrap_or(Template {
+                parts: vec![],
+                raw: value.to_string()
+            })
     } 
 
     /// Takes a variable context and renders a template
     /// Useful if your application doesn't require variables and you want them rendered now
     pub fn render(&self, variables: &IndexMap<String, String>) -> String {
         let mut built = "".to_string(); 
-        for part in &self.0 {
+        for part in &self.parts {
             built += match part {
                 TemplatePart::Variable(name) => match variables.get(name) {
                     Some(value) => value.as_str(),
@@ -40,6 +47,7 @@ impl Template {
         built
     }
 }
+
 
 impl FromStr for Template {
     type Err = Error; 
@@ -79,7 +87,22 @@ impl FromStr for Template {
             value = "".into();
         }
 
-        Ok(Template(parts))
+        Ok(Template {
+            parts,
+            raw: s.to_string(),
+        })
+    }
+}
+
+impl From<String> for Template {
+    fn from(value: String) -> Self {
+        Template::new(&value)
+    }
+}
+
+impl fmt::Display for Template {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.raw)
     }
 }
 
@@ -95,15 +118,15 @@ mod tests {
 
         fn text(t: &str) -> TemplatePart {
             TemplatePart::Text(t.into())
-        } 
+        }
 
         let line = "hello {{name}}! swag";
         let template = Template::new(line);
-        assert_eq!(template, Template(vec![
+        assert_eq!(template.parts, vec![
             text("hello "), 
             var("name"),
             text("! swag"), 
-        ]));
+        ]);
 
         let vars: IndexMap<String, String> = {
             let mut m = IndexMap::new();
@@ -112,20 +135,20 @@ mod tests {
         }; 
         
         let render = template.render(&vars); 
-        println!("{render}");
+        assert_eq!(render, "hello Joe! swag".to_string());
 
         let line = "{{name}}";
         let got = Template::from_str(line).unwrap();
-        assert_eq!(got, Template(vec![
+        assert_eq!(got.parts, vec![
             var("name"),
-        ]));
+        ]);
 
         let line = "{{first }} {{ last }}";
         let got = Template::from_str(line).unwrap();
-        assert_eq!(got, Template(vec![
+        assert_eq!(got.parts, vec![
             var("first"),
             text(" "), 
             var("last"),
-        ]));
+        ]);
     }
 }

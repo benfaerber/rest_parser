@@ -32,7 +32,7 @@ GET {{HOST}}/get HTTP/1.1"#;
     assert_eq!(host_var, Some(&"http://httpbin.org".into()));
 
     let method = &requests.first().unwrap().method;
-    assert_eq!(method, "GET");
+    assert_eq!(method.raw, "GET");
 
     assert_eq!(flavor, RestFlavor::Jetbrains); 
 }

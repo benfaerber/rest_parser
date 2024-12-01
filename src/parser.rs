@@ -11,6 +11,8 @@ use nom::{
 use std::{path::Path, str::{self, FromStr}};
 use url::Url;
 
+use crate::template::Template;
+
 use super::headers::{Authorization, RestHeaders};
 
 type StrResult<'a> = Result<(&'a str, &'a str), nom::Err<NomError<&'a str>>>;
@@ -126,11 +128,11 @@ impl Body {
 #[derive(Debug, Clone)]
 pub struct RestRequest {
     pub name: Option<String>,
-    pub url: String,
-    pub query: IndexMap<String, String>,
+    pub url: Template,
+    pub query: IndexMap<String, Template>,
     pub body: Option<Body>,
-    pub method: String,
-    pub headers: IndexMap<String, String>,
+    pub method: Template,
+    pub headers: IndexMap<String, Template>,
     pub authorization: Option<Authorization>,
     pub commands: IndexMap<String, Option<String>>,
 }
@@ -163,7 +165,7 @@ impl RestRequest {
         let content_type = rest_headers.content_type(); 
         let RestHeaders { headers, authorization } = rest_headers;
 
-        let method = req.method.unwrap_or("GET").into();
+        let method = Template::new(req.method.unwrap_or("GET"));
         
         let body = raw_body_portion.map(|body| Body::parse(&body, &content_type));
 
@@ -182,8 +184,8 @@ impl RestRequest {
 
 #[derive(Debug, Clone)]
 struct RestUrl {
-    url: String,
-    query: IndexMap<String, String>,
+    url: Template,
+    query: IndexMap<String, Template>,
 }
 
 /// Parse the query portion of a URL
@@ -194,13 +196,14 @@ struct RestUrl {
 /// There's no public interface in URL to parse the query portion alone
 fn parse_query(
     query_portion: &str,
-) -> anyhow::Result<IndexMap<String, String>> {
+) -> anyhow::Result<IndexMap<String, Template>> {
     let fake_url = Url::parse(&format!("http://localhost?{query_portion}"))
         .context(format!("Invalid query (Query: {query_portion})"))?;
 
-    let mut query: IndexMap<String, String> = IndexMap::new();
+    let mut query: IndexMap<String, Template> = IndexMap::new();
     for (k, v) in fake_url.query_pairs() {
-        query.insert(k.into(), v.into());
+        let template = Template::from(v.to_string());
+        query.insert(k.into(), template);
     }
     Ok(query)
 }
@@ -215,15 +218,17 @@ impl FromStr for RestUrl {
         }
 
         if let Ok((url_part, query_part)) = url_and_query(path) {
-            let url = url_part.to_string();
+            let url = Template::new(&url_part.to_string());
             let query = parse_query(query_part)?;
 
             return Ok(Self { url, query });
         }
 
+        let url: String = path.to_string().try_into()?;
+
         // The url is just a string or template
         Ok(Self {
-            url: path.to_string().try_into()?,
+            url: Template::new(&url), 
             query: IndexMap::new(),
         })
     }

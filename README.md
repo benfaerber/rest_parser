@@ -3,9 +3,9 @@
 Parse [VSCode `.rest` files](https://github.com/Huachao/vscode-restclient) and [Jetbrains `.http` files](https://www.jetbrains.com/help/idea/http-client-in-product-code-editor.html).
 
 These are common files used to integrate API testing into IDEs.
-There are multiple similar tools out there and it can be tedious to switch over.
-It is not for processing REST files only for parsing and turning the files into structured data.
-This library was created with the hope that people will be able to parse these files and convert them into better alternatives.
+It is not for processing REST files and sending requests only for parsing and turning the files into structured data.
+This library was created with the hope that people will be able to parse these files and convert them into alternate formats (HURL, Slumber, Python Requests, etc).
+There are multiple similar file formats out there and it can be tedious to switch over.
 
 ## Getting Started:
 

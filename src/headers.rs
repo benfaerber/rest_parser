@@ -6,13 +6,15 @@ use nom::{
 use base64::{prelude::BASE64_STANDARD, Engine};
 use std::str;
 
+use crate::template::Template;
+
 const AUTHORIZATION_HEADER: &str = "Authorization";
 
 const CONTENT_TYPE: &str = "Content-Type";
 
 pub(crate) struct RestHeaders {
     pub(crate) authorization: Option<Authorization>,
-    pub(crate) headers: IndexMap<String, String>
+    pub(crate) headers: IndexMap<String, Template>
 }
 
 impl RestHeaders {
@@ -29,7 +31,7 @@ impl RestHeaders {
             .map(|h| h.to_owned())
             .collect();
 
-        let mut headers: IndexMap<String, String> = IndexMap::new();
+        let mut headers: IndexMap<String, Template> = IndexMap::new();
         let mut authorization: Option<Authorization> = None;
         for header in headers_vec {
             let name = header.name.to_string();
@@ -45,7 +47,7 @@ impl RestHeaders {
                 }
             }
 
-            let value = str_val.to_string();
+            let value = Template::new(str_val);
             headers.insert(name, value);
         }
 
@@ -57,8 +59,9 @@ impl RestHeaders {
 
     pub(crate) fn content_type(&self) -> String {
         self.headers.get(CONTENT_TYPE)
-            .unwrap_or(&"unknown".into())
-            .to_string() 
+            .unwrap_or(&Template::new("unknown"))
+            .raw
+            .clone()
     }
 }
 

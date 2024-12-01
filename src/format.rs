@@ -79,8 +79,8 @@ impl RestFormat {
                     current_commands.insert(name, params); 
                 },
                 Line::Request(req) => {
-                    let next_line = format!("{req}{REQUEST_NEWLINE}");
-                    current_request.push_str(&next_line);
+                    current_request.push_str(&req);
+                    current_request.push_str(REQUEST_NEWLINE);
                 }
             }
         }
