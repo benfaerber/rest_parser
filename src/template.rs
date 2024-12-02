@@ -16,6 +16,16 @@ pub enum TemplatePart {
     Variable(String),
 }
 
+impl TemplatePart {
+    fn text(value: &str) -> Self {
+        TemplatePart::Text(value.to_string())
+    }
+
+    fn var(value: &str) -> Self {
+        TemplatePart::Variable(value.to_string())
+    }    
+}
+
 const VARIABLE_START: &str = "{{";
 const VARIABLE_END: &str = "}}";
 
@@ -28,9 +38,9 @@ pub struct Template {
 impl Template {
     pub fn new(value: &str) -> Self {
         Self::from_str(value)
-            .unwrap_or(Template {
+            .unwrap_or(Self {
                 parts: vec![],
-                raw: value.to_string()
+                raw: value.into(),
             })
     } 
 
@@ -50,7 +60,6 @@ impl Template {
         built
     }
 }
-
 
 impl FromStr for Template {
     type Err = Error; 
@@ -76,23 +85,24 @@ impl FromStr for Template {
             let test_val = &value.clone();
             if let Ok((new_val, var)) = parse_variable(test_val) {
                 value = new_val.to_string();
-                parts.push(TemplatePart::Variable(var.to_string()));
+                parts.push(TemplatePart::var(var));
                 continue;
             } 
 
             if let Ok((new_val, text)) = parse_text(test_val) {
                 value = new_val.to_string();
-                parts.push(TemplatePart::Text(text.to_string()));
+                parts.push(TemplatePart::text(text));
                 continue;
             }
             
-            parts.push(TemplatePart::Text(value.to_string()));
-            value = "".into();
+            parts.push(TemplatePart::text(&value));
+            break; 
         }
 
+        let raw = s.into();
         Ok(Template {
             parts,
-            raw: s.to_string(),
+            raw,
         })
     }
 }

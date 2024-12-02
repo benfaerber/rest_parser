@@ -101,7 +101,6 @@ impl CurlRenderer {
         let headers = self.render_headers(headers);
         let method = self.render_method(method); 
         let query = self.render_query(query);
-        println!("{:?}", body); 
         let (body, output) = self.render_body(body);
         let url = self.render_url(url);
 

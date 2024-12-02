@@ -143,6 +143,7 @@ impl RestRequest {
         
         let req_buffer = req_portion.as_bytes();
         req.parse(req_buffer).map_err(|parse_err| {
+            println!("{:?}", parse_err); 
             anyhow!("Failed to parse request! {parse_err:?}")
         })?;
 
@@ -192,7 +193,7 @@ fn parse_query(
 
     let mut query: IndexMap<String, Template> = IndexMap::new();
     for (k, v) in fake_url.query_pairs() {
-        let template = Template::from(v.to_string());
+        let template = Template::new(&v);
         query.insert(k.into(), template);
     }
     Ok(query)
@@ -245,6 +246,8 @@ fn parse_request_and_raw_body(input: &str) -> (String, Option<String>) {
 
     match take_until_body(input) {
         Ok((body_portion, req_portion)) => {
+            // TODO: Figure out how to deal with spaces in templates here (maybe regex transform? "{{ +" -> "XXX") 
+            let req_portion = req_portion.replace("{{ ", "{{");
             let req_with_end = format!("{req_portion}{REQUEST_NEWLINE}");
             (req_with_end, Some(body_portion.trim().into()))
         }
@@ -278,6 +281,13 @@ mod test {
         let example = "{{my_url}}";
         let parsed: RestUrl = example.parse().unwrap();
         assert_eq!(parsed.url.to_string(), "{{my_url}}");
+
+        // With space
+        let example = "{{ VAR}}?x={{ b }}&word=cool";
+        let parsed = RestUrl::from_str(example).unwrap();
+        assert_eq!(parsed.url.to_string(), "{{ VAR}}");
+        assert_eq!(parsed.query.get("x").unwrap().to_string(), "{{ b }}");
+        assert_eq!(parsed.query.get("word").unwrap().to_string(), "cool");
     }
 
     #[test]
