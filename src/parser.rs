@@ -259,6 +259,7 @@ fn parse_request_and_raw_body(input: &str) -> (String, Option<String>) {
 #[cfg(test)]
 mod test {
     use super::*;
+    use indoc::indoc;
 
     #[test]
     fn parse_url_test() {
@@ -292,37 +293,37 @@ mod test {
 
     #[test]
     fn parse_request_and_raw_body_test() {
-        let example = r#"
-POST /post?q=hello HTTP/1.1
-Host: localhost
-Content-Type: application/json
-X-Http-Method-Override: PUT
+        let example = indoc! {r#"
+            POST /post?q=hello HTTP/1.1
+            Host: localhost
+            Content-Type: application/json
+            X-Http-Method-Override: PUT
 
-{
-    "data": "my data"
-}
-"#
-        .trim()
-        .replace("\n", REQUEST_NEWLINE);
+            {
+                "data": "my data"
+            }
+        "#}.trim().replace("\n", "\r\n");
 
         let (req, body) = parse_request_and_raw_body(&example);
 
+        let expected = indoc! {r#"
+            POST /post?q=hello HTTP/1.1
+            Host: localhost
+            Content-Type: application/json
+            X-Http-Method-Override: PUT
+        "#}; 
+
         assert_eq!(
             req,
-            r#"POST /post?q=hello HTTP/1.1
-Host: localhost
-Content-Type: application/json
-X-Http-Method-Override: PUT
-"#
-            .replace("\n", "\r\n")
+            expected.replace("\n", "\r\n")
         );
 
         assert_eq!(
             body,
             Some(
-                r#"{
-    "data": "my data"
-}"#
+                indoc! {r#"{
+                    "data": "my data"
+                }"#}
                 .replace("\n", "\r\n")
             )
         );
@@ -358,24 +359,27 @@ X-Http-Method-Override: PUT
             encoding: Some("latin1".to_string()),
             filepath: Template::new("file.txt")
         });
-        
-        let json_with_export = r#"{
-    "data": "my data"
-}
+       
+        let json_with_export = indoc! {r#"
+            {
+                "data": "my data"
+            }
 
->> ./cool-file.json"#;
+            >> ./cool-file.json"#};
         assert_eq!(Body::parse(json_with_export, "application/json"), Body::SaveToFile { 
-            text: Template::new(r#"{
-    "data": "my data"
-}"#),
+            text: Template::new(indoc! {r#"
+                {
+                    "data": "my data"
+                }"#}),
             filepath: Template::new("./cool-file.json")
         });
 
 
-        let form_body = r#"a=1&
-b=2&
-c=3
-"#;
+        let form_body = indoc! {r#"
+            a=1&
+            b=2&
+            c=3
+        "#};
         assert_eq!(Body::parse(form_body, FORM_URL_ENCODED), text("a=1&b=2&c=3"));
     }
 }
