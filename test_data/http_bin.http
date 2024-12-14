@@ -1,7 +1,7 @@
 @HOST = http://httpbin.org
 ### SimpleGet
 
-GET {{HOST}}/get HTTP/1.1
+GET {{ HOST}}/get HTTP/1.1
 
 /// Another comment
 
@@ -9,7 +9,7 @@ GET {{HOST}}/get HTTP/1.1
 # @name JsonPost
 @FIRST=Joe
 @LAST=Smith
-@FULL={{FIRST}} {{LAST}}
+@FULL={{ FIRST }} {{LAST}}
 
 POST {{HOST}}/post?hello=123 HTTP/1.1
 Authorization: Basic Zm9vOmJhcg==

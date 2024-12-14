@@ -17,11 +17,11 @@ pub enum TemplatePart {
 }
 
 impl TemplatePart {
-    fn text(value: &str) -> Self {
+    pub fn text(value: &str) -> Self {
         TemplatePart::Text(value.to_string())
     }
 
-    fn var(value: &str) -> Self {
+    pub fn var(value: &str) -> Self {
         TemplatePart::Variable(value.to_string())
     }    
 }

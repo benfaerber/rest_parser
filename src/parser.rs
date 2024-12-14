@@ -140,7 +140,10 @@ impl RestRequest {
         // We need an empty buffer of headers (max of 64)
         let mut headers = [httparse::EMPTY_HEADER; 64];
         let mut req = httparse::Request::new(&mut headers);
-        
+       
+        // Clean up vars from request so it can be parsed 
+        let req_portion = Self::apply_placeholder(&req_portion, true);
+
         let req_buffer = req_portion.as_bytes();
         req.parse(req_buffer).map_err(|parse_err| {
             println!("{:?}", parse_err); 
@@ -151,7 +154,9 @@ impl RestRequest {
             .path
             .ok_or(anyhow!("There is no path for this request!"))?;
 
-        let RestUrl { url, query } = RestUrl::from_str(path)?;
+        let path = Self::apply_placeholder(&path, false);
+
+        let RestUrl { url, query } = RestUrl::from_str(&path)?;
         let rest_headers = RestHeaders::from_header_slice(req.headers)?;
         let content_type = rest_headers.content_type(); 
         let RestHeaders { headers, authorization } = rest_headers;
@@ -170,6 +175,22 @@ impl RestRequest {
             authorization,
             commands,
         })
+    }
+
+    fn apply_placeholder(path: &str, apply: bool) -> String {
+        let open_d = "{{ ";
+        let close_d = " }}";
+        let open_p = "_TO_";
+        let close_p = "_TC_";
+
+        let (rep1, rep2) = if apply {
+            ((open_d, open_p),  (close_d, close_p))
+        } else {
+            ((open_p, open_d), (close_p, close_d))
+        }; 
+
+        path.replace(rep1.0, rep1.1)
+            .replace(rep2.0, rep2.1)
     }
 }
 
@@ -258,6 +279,8 @@ fn parse_request_and_raw_body(input: &str) -> (String, Option<String>) {
 
 #[cfg(test)]
 mod test {
+    use crate::template::TemplatePart;
+
     use super::*;
     use indoc::indoc;
 
@@ -381,5 +404,49 @@ mod test {
             c=3
         "#};
         assert_eq!(Body::parse(form_body, FORM_URL_ENCODED), text("a=1&b=2&c=3"));
+    }
+
+    #[test]
+    fn parse_get_request_test() {
+        let get_request = indoc! {r#"
+            GET https://httpbin.org/get HTTP/1.1
+        "#};
+
+        let req = RestRequest::from_raw_request(None, IndexMap::new(), get_request);
+        match req {
+            Ok(RestRequest { url, method, .. }) => {
+                assert_eq!(url.to_string(), "https://httpbin.org/get");
+                assert_eq!(method.to_string(), "GET");
+            },
+            other => panic!("Failure!, {other:?}")
+        }
+
+        // Test Var
+        let get_request = indoc! {r#"
+            GET {{HOST}}/get HTTP/1.1
+        "#};
+
+        let req = RestRequest::from_raw_request(None, IndexMap::new(), get_request);
+        match req {
+            Ok(RestRequest { url, method, .. }) => {
+                assert_eq!(url.parts.first(), Some(&TemplatePart::var("HOST")));
+                assert_eq!(method.to_string(), "GET");
+            },
+            other => panic!("Failure!, {other:?}")
+        }
+        
+        // Test Var with Space
+        let get_request = indoc! {r#"
+            GET {{ HOST }}/get HTTP/1.1
+        "#};
+
+        let req = RestRequest::from_raw_request(None, IndexMap::new(), get_request);
+        match req {
+            Ok(RestRequest { url, method, .. }) => {
+                assert_eq!(url.parts.first(), Some(&TemplatePart::var("HOST")));
+                assert_eq!(method.to_string(), "GET");
+            },
+            other => panic!("Failure!, {other:?}")
+        }
     }
 }
