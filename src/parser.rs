@@ -213,15 +213,15 @@ impl FromStr for RestUrl {
             let query = parse_query(query_part)?;
 
             return Ok(Self { url, query });
+        } else {
+            let url: String = path.to_string().try_into()?;
+
+            // The url is just a string or template
+            Ok(Self {
+                url: Template::new(&url), 
+                query: IndexMap::new(),
+            })
         }
-
-        let url: String = path.to_string().try_into()?;
-
-        // The url is just a string or template
-        Ok(Self {
-            url: Template::new(&url), 
-            query: IndexMap::new(),
-        })
     }
 }
 
