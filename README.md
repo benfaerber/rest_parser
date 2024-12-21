@@ -36,6 +36,9 @@ GET {{HOST}}/get HTTP/1.1"#;
 Not all features have been ported over, mostly because they are security risks and/or super niche.
 One example is [running Javascript to transform responses](https://www.jetbrains.com/help/idea/exploring-http-syntax.html#per_request_variables) in the Jetbrains flavor.
 
+Note that this is just a parser, so by supported I mean the listed feature is able to be parsed. Its up the implementor to setup the behavior for each feature.
+Checkout the [rest_to_curl](https://github.com/benfaerber/rest_parser/blob/master/rest_to_curl/src/main.rs) to see this library in action.
+
 ### Supported
 - Global Variables: `@HOST = https://httpbin.org`
 - Splitting requests with optional names: `###` or `### GetRequest`
@@ -44,7 +47,7 @@ One example is [running Javascript to transform responses](https://www.jetbrains
 - Parsing query parameters
 - Loading request body from a file
 - Saving response body to a file
+- Special handling for certain requests `# @no-log`, `# @no-cookie-jar`, etc
 
 ### Unsupported
 - Transforming responses with Javascript
-- Special handling for certain requests `# @no-log`, `# @no-cookie-jar`, etc
