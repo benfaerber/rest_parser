@@ -1,4 +1,5 @@
-# rest_parser
+# rest_parser [![crates.io](https://img.shields.io/crates/v/rest_parser.svg?logo=rust)](https://crates.io/crates/rest_parser)
+
 
 Parse [VSCode `.rest` files](https://github.com/Huachao/vscode-restclient) and [Jetbrains `.http` files](https://www.jetbrains.com/help/idea/http-client-in-product-code-editor.html).
 
@@ -10,6 +11,11 @@ There are multiple similar file formats out there and it can be tedious to switc
 Check out [rest_to_curl](https://github.com/benfaerber/rest_parser/blob/master/rest_to_curl/src/main.rs) for an example usecase!
 
 ## Getting Started:
+
+```shell
+cargo add rest_parser
+```
+
 
 This library exports the `RestFormat` struct which is used to parse:
 ```rust
