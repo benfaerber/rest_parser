@@ -70,3 +70,4 @@ Checkout the [rest_to_curl](https://github.com/benfaerber/rest_parser/blob/maste
 
 ### Unsupported
 - Transforming responses with Javascript
+- Any other niche / super flavor specific features not listed
