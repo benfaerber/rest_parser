@@ -16,7 +16,6 @@ use crate::{template::Template, RestVariables};
 
 type StrResult<'a> = IResult<&'a str, &'a str>;
 
-
 const REQUEST_DELIMITER: &str = "###";
 
 const NAME_ANNOTATION: &str = "@name";
