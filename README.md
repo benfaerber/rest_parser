@@ -13,22 +13,31 @@ Check out [rest_to_curl](https://github.com/benfaerber/rest_parser/blob/master/r
 
 This library exports the `RestFormat` struct which is used to parse:
 ```rust
-use rest_parser::{RestFormat, RestFlavor, RestRequest};
-
 fn main() {
     // From a file
     let _format = RestFormat::parse_file("../test_data/jetbrains.http").unwrap();
 
-    // From a string
+    // From a string 
     let rest_data =  r#"
-@HOST = http://httpbin.org
+@HOST = https://httpbin.org
 ### SimpleGet
 GET {{HOST}}/get HTTP/1.1"#;
 
-    let format = RestFormat::parse(rest_data, RestFlavor::Jetbrains).unwrap();
+    let RestFormat { requests, variables, flavor } = RestFormat::parse(
+        rest_data,
+        // Normally, the flavor is determined by the file extension.
+        RestFlavor::Jetbrains
+    ).unwrap();
+    
+    let host_var = variables.get("HOST").unwrap();
+    assert_eq!(host_var.to_string(), "https://httpbin.org");
 
-    let host_var = format.variables.get("HOST");
-    assert!(host_var == Some(&"http://httpbin.org".into()));
+    let req = requests.first().unwrap();
+    assert_eq!(req.method.raw, "GET");
+    assert_eq!(req.url.parts.first().unwrap(), &TemplatePart::var("HOST"));
+    assert_eq!(req.url.parts.get(1).unwrap(), &TemplatePart::text("/get"));
+
+    assert_eq!(flavor, RestFlavor::Jetbrains);
 }
 ```
 

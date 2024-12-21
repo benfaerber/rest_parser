@@ -1,4 +1,4 @@
-use rest_parser::{RestFormat, RestRequest, RestVariables, RestFlavor};
+use rest_parser::{template::TemplatePart, RestFlavor, RestFormat, RestRequest, RestVariables};
 
 fn print_request(request: &RestRequest, number: usize) {
     println!("Request Number {number}"); 
@@ -18,7 +18,7 @@ fn main_from_docs() {
 
     // From a string 
     let rest_data =  r#"
-@HOST = http://httpbin.org
+@HOST = https://httpbin.org
 ### SimpleGet
 GET {{HOST}}/get HTTP/1.1"#;
 
@@ -28,13 +28,15 @@ GET {{HOST}}/get HTTP/1.1"#;
         RestFlavor::Jetbrains
     ).unwrap();
     
-    let host_var = variables.get("HOST");
-    assert_eq!(host_var, Some(&"http://httpbin.org".into()));
+    let host_var = variables.get("HOST").unwrap();
+    assert_eq!(host_var.to_string(), "https://httpbin.org");
 
-    let method = &requests.first().unwrap().method;
-    assert_eq!(method.raw, "GET");
+    let req = requests.first().unwrap();
+    assert_eq!(req.method.raw, "GET");
+    assert_eq!(req.url.parts.first().unwrap(), &TemplatePart::var("HOST"));
+    assert_eq!(req.url.parts.get(1).unwrap(), &TemplatePart::text("/get"));
 
-    assert_eq!(flavor, RestFlavor::Jetbrains); 
+    assert_eq!(flavor, RestFlavor::Jetbrains);
 }
 
 fn main() {
