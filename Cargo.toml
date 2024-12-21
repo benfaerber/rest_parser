@@ -2,6 +2,13 @@
 name = "rest_parser"
 version = "0.1.0"
 edition = "2021"
+authors = ["Benjamin Faerber"]
+license = "MIT"
+keywords = ["rest", "developer-tools", "parser", "parser-combinators"]
+description = "Parse VSCode `.rest` files and Jetbrains `.http` files"
+readme = "README.md"
+homepage = "https://github.com/benfaerber/rest_parser"
+repository = "https://github.com/benfaerber/rest_parser"
 
 [workspace]
 
@@ -14,10 +21,11 @@ members = [
 [dependencies]
 anyhow = {version = "1.0.82", features=["backtrace"]}
 base64 = "^0.21.7"
-derive_more = {version = "1.0.0-beta.6", features = ["debug", "deref", "deref_mut", "display", "from", "from_str"]}
 
 nom = "7.1.3"
 indexmap = {version = "^2.0.1", features = ["serde"]}
 httparse = "1.8.0"
 url = { version = "2.5.0", features = ["serde"] }
+
+[dev-dependencies]
 indoc = "2.0.5"

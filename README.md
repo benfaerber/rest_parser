@@ -37,6 +37,10 @@ GET {{HOST}}/get HTTP/1.1"#;
     assert_eq!(req.url.parts.first().unwrap(), &TemplatePart::var("HOST"));
     assert_eq!(req.url.parts.get(1).unwrap(), &TemplatePart::text("/get"));
 
+    // Render the variables using the template
+    let rendered_url = req.url.render(&variables);
+    assert_eq!(rendered_url, "https://httpbin.org/get");
+
     assert_eq!(flavor, RestFlavor::Jetbrains);
 }
 ```
