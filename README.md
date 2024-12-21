@@ -49,7 +49,7 @@ GET {{HOST}}/get HTTP/1.1"#;
 Not all features have been ported over, mostly because they are security risks and/or super niche.
 One example is [running Javascript to transform responses](https://www.jetbrains.com/help/idea/exploring-http-syntax.html#per_request_variables) in the Jetbrains flavor.
 
-Note that this is just a parser, so by supported I mean the listed feature is able to be parsed. Its up the implementor to setup the behavior for each feature.
+Note that this is just a parser, so by supported I mean the listed feature are able to be parsed. It's up to the implementor to setup the behavior for each feature.
 Checkout the [rest_to_curl](https://github.com/benfaerber/rest_parser/blob/master/rest_to_curl/src/main.rs) to see this library in action.
 
 ### Supported
