@@ -1,7 +1,7 @@
-mod lexer;
-mod parser;
-mod format;
-mod headers;
+pub mod lexer;
+pub mod parser;
+pub mod format;
+pub mod headers;
 pub mod template;
 
 pub use format::RestFormat;
