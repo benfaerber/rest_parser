@@ -10,7 +10,7 @@ use crate::template::Template;
 
 const AUTHORIZATION_HEADER: &str = "Authorization";
 
-const CONTENT_TYPE: &str = "content-type";
+const CONTENT_TYPE: &str = "Content-Type";
 
 pub(crate) struct RestHeaders {
     pub(crate) authorization: Option<Authorization>,
