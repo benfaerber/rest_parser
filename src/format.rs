@@ -13,7 +13,7 @@ use super::lexer::{Line, parse_lines};
 use super::parser::{RestRequest, RestFlavor, REQUEST_NEWLINE};
 
 /// A basic representaion of the REST format
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct RestFormat {
     /// A list of recipes
     pub requests: Vec<RestRequest>,

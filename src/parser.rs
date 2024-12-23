@@ -8,6 +8,7 @@ use indexmap::IndexMap;
 use nom::{
     bytes::{complete::tag, streaming::take_until}, character::complete::alphanumeric1, combinator::opt, error::Error as NomError, sequence::pair, IResult
 };
+use core::fmt;
 use std::{path::Path, str::{self, FromStr}};
 use url::Url;
 
@@ -26,10 +27,11 @@ pub type RestVariables = IndexMap<String, Template>;
 
 /// The specific type of REST file.
 /// They are all similar with slightly different feature sets
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RestFlavor {
     Vscode,
     Jetbrains,
+    #[default] 
     Generic,
 }
 
@@ -40,6 +42,17 @@ impl RestFlavor {
             Some(ext) if ext == "rest" => Self::Vscode,
             _ => Self::Generic,
         }
+    }
+}
+
+impl fmt::Display for RestFlavor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let output = match self {
+            Self::Vscode => "vscode",
+            Self::Jetbrains => "jetbrains",
+            Self::Generic => "generic",
+        }; 
+        write!(f, "{output}")
     }
 }
 
@@ -115,7 +128,7 @@ impl Body {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct RestRequest {
     pub name: Option<String>,
     pub url: Template,

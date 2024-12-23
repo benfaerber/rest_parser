@@ -29,7 +29,7 @@ impl TemplatePart {
 const VARIABLE_START: &str = "{{";
 const VARIABLE_END: &str = "}}";
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Template {
     pub parts: Vec<TemplatePart>,
     pub raw: String,
