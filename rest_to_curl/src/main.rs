@@ -1,6 +1,7 @@
 use rest_parser::template::{Template, TemplateMap, TemplatePart};
 use rest_parser::{Body, RestFormat, RestRequest, RestVariables};
 use std::fs;
+use colored::Colorize;
 
 struct CurlRenderer {
     vars: RestVariables,
@@ -63,7 +64,7 @@ impl CurlRenderer {
             .unwrap_or("".into());
 
         let save_cmd = save_to
-            .map(|filename| format!(" -o \"{filename}\""))
+            .map(|filename| format!(" -o \"{filename}\" \\\n"))
             .unwrap_or("".into());
 
         (out_body, save_cmd)
@@ -74,8 +75,8 @@ impl CurlRenderer {
             .iter()
             .map(|(k, v)| format!("-H \"{}: {}\"", k, self.render_template(v)))
             .collect::<Vec<String>>()
-            .join(" ");
-        format!(" {all_headers}")
+            .join(" \\\n");
+        format!(" {all_headers} \\\n")
     }
 
     fn render_url(&self, url: Template) -> String {
@@ -85,7 +86,7 @@ impl CurlRenderer {
 
     fn render_method(&self, method: Template) -> String {
         let method = self.render_template(&method);
-        format!(" -X {method}")
+        format!(" -X {method} \\\n")
     }
 
     fn render_variables(&self) -> String {
@@ -94,8 +95,8 @@ impl CurlRenderer {
             .iter()
             .map(|(k, v)| format!("{}=\"{}\"", k, self.render_template(v)))
             .collect::<Vec<String>>()
-            .join("; ");
-        format!("{all_vars}; ")
+            .join("; \\\n");
+        format!("{all_vars}; \\\n")
     }
 
     fn render_template(&self, template: &Template) -> String {
@@ -118,7 +119,6 @@ impl CurlRenderer {
             url,
             ..
         } = req;
-        println!("BODY\n\n{:?}\n", body);
         let variables = self.render_variables();
         let headers = self.render_headers(headers);
         let method = self.render_method(method);
@@ -126,7 +126,7 @@ impl CurlRenderer {
         let (body, output) = self.render_body(body);
         let url = self.render_url(url);
 
-        format!("{variables}curl {url}{query} \\\n{method}{output} \\\n{headers} \\\n{body}")
+        format!("{variables}curl {url}{query}{method}{output}{headers}{body}")
     }
 }
 
@@ -143,8 +143,8 @@ fn main() {
     for req in requests {
         let name = req.name.clone();
         let cmd = renderer.render_request(req);
-        println!("{}", name.unwrap_or("Request".to_string()));
-        println!("--------------");
+        println!("{}", name.unwrap_or("Request".to_string()).green());
+        println!("{}", "--------------".green());
         println!("{cmd}\n");
     }
 }
