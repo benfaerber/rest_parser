@@ -103,11 +103,10 @@ impl CurlRenderer {
             .parts
             .iter()
             .map(|part| match part {
-                TemplatePart::Text(text) => text.clone(),
+                TemplatePart::Text(text) => text.clone().replace("\r\n", "\n"),
                 TemplatePart::Variable(var) => format!("${var}"),
             })
-            .collect::<Vec<String>>()
-            .join("")
+            .collect::<String>()
     }
 
     fn render_request(&self, req: RestRequest) -> String {
@@ -119,6 +118,7 @@ impl CurlRenderer {
             url,
             ..
         } = req;
+        println!("BODY\n\n{:?}\n", body);
         let variables = self.render_variables();
         let headers = self.render_headers(headers);
         let method = self.render_method(method);
@@ -126,7 +126,7 @@ impl CurlRenderer {
         let (body, output) = self.render_body(body);
         let url = self.render_url(url);
 
-        format!("{variables}curl {url}{query}{method}{output}{headers}{body}")
+        format!("{variables}curl {url}{query} \\\n{method}{output} \\\n{headers} \\\n{body}")
     }
 }
 
