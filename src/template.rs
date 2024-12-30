@@ -39,7 +39,9 @@ impl Template {
     pub fn new(value: &str) -> Self {
         Self::from_str(value)
             .unwrap_or(Self {
-                parts: vec![],
+                parts: vec![
+                    TemplatePart::text(value)
+                ],
                 raw: value.into(),
             })
     } 
