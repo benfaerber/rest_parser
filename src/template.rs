@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use anyhow::Error;
+use anyhow::{Error, anyhow};
 use nom::{
     bytes::{complete::tag, streaming::take_until}, character::complete::space0, IResult
 };
@@ -90,11 +90,15 @@ impl FromStr for Template {
             } 
 
             if let Ok((new_val, text)) = parse_text(test_val) {
+                if text.is_empty() {
+                    return Err(anyhow!("Unclosed template!"));
+                } 
+
                 value = new_val.to_string();
                 parts.push(TemplatePart::text(text));
                 continue;
             }
-            
+           
             parts.push(TemplatePart::text(&value));
             break; 
         }
@@ -164,5 +168,20 @@ mod tests {
             text(" "), 
             var("last"),
         ]);
+    }
+
+    #[test]
+    fn can_parse_error() {
+        // This should unclosed template error
+        let template = Template::from_str("Test {{ end"); 
+        assert!(template.is_err());
+
+        // This should error
+        let template = Template::from_str("Test {{{}} end"); 
+        assert!(template.is_err());
+
+        // Just parse as normal text
+        let template = Template::from_str("Test }} end"); 
+        assert!(template.is_ok());
     }
 }
