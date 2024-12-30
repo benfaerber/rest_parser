@@ -1,7 +1,8 @@
+use colored::Colorize;
 use rest_parser::template::{Template, TemplateMap, TemplatePart};
 use rest_parser::{Body, RestFormat, RestRequest, RestVariables};
+use std::env::args;
 use std::fs;
-use colored::Colorize;
 
 struct CurlRenderer {
     vars: RestVariables,
@@ -130,13 +131,19 @@ impl CurlRenderer {
     }
 }
 
+const TEST_FILE: &str = "../test_data/http_bin.http";
+
 fn main() {
-    let test_file = "../test_data/http_bin.http";
+    let args: Vec<String> = args().collect();
+    let def_file = TEST_FILE.to_string(); 
+    let filename = args
+        .get(1)
+        .unwrap_or(&def_file);
     let RestFormat {
         requests,
         variables,
         ..
-    } = RestFormat::parse_file(test_file).unwrap();
+    } = RestFormat::parse_file(filename.clone()).unwrap();
 
     let renderer = CurlRenderer::new(Some(variables));
 
