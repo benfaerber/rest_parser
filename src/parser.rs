@@ -98,7 +98,7 @@ impl Body {
             let body = Body::LoadFromFile { 
                 process_variables,
                 encoding,
-                filepath: Template::new(&inp),
+                filepath: Template::new(inp),
             }; 
 
             Ok(("", body))
@@ -167,7 +167,7 @@ impl RestRequest {
             .path
             .ok_or(anyhow!("There is no path for this request!"))?;
 
-        let path = Self::apply_placeholder(&path, false);
+        let path = Self::apply_placeholder(path, false);
 
         let RestUrl { url, query } = RestUrl::from_str(&path)?;
         let rest_headers = RestHeaders::from_header_slice(req.headers)?;
@@ -243,10 +243,10 @@ impl FromStr for RestUrl {
         }
 
         if let Ok((url_part, query_part)) = url_and_query(path) {
-            let url = Template::new(&url_part.to_string());
+            let url = Template::new(url_part);
             let query = parse_query(query_part)?;
 
-            return Ok(Self { url, query });
+            Ok(Self { url, query })
         } else {
             let url: String = path.to_string().try_into()?;
 

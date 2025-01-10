@@ -69,7 +69,7 @@ fn parse_request_name_annotation(input: &str) -> IResult<&str, &str> {
     let (input, _) = pair(alt((char('='), char(' '))), space0)(input)?;
     let (input, req_name) = take_till(|c| c == ' ' || c == '\n')(input)?;
 
-    Ok((input, req_name.into()))
+    Ok((input, req_name))
 }
 
 
@@ -88,7 +88,7 @@ fn parse_request_command(input: &str) -> IResult<&str, (&str, Option<&str>)> {
         other => other,
     };
     
-    Ok((input, (cmd_name.into(), params)))
+    Ok((input, (cmd_name, params)))
 }
 
 
@@ -111,13 +111,13 @@ fn parse_variable_assignment(input: &str) -> IResult<&str, (&str, &str)> {
     let (input, value) = take_till(|c| c == '\n')(input)?;
     let (input, _) = newline(input)?;
 
-    Ok((input, (id.into(), value.into())))
+    Ok((input, (id, value)))
 }
 
 /// A comment can start with `//` or `#`
 /// A comment cannot be mid line because it messes with URLs
 fn is_comment(line: &str) -> bool {
-    matches!(starting_comment(line), Ok(_))
+    starting_comment(line).is_ok()
 }
 
 /// Parse an input string line by line

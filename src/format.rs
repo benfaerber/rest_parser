@@ -40,7 +40,7 @@ impl RestFormat {
 
     pub fn parse(text: &str, flavor: RestFlavor) -> anyhow::Result<Self> {
         let (lines, variables) = parse_lines(text)?;
-        Ok(Self::from_lines(lines, variables, flavor)?)
+        Self::from_lines(lines, variables, flavor)
     }
 
     /// Take each parsed line (like a lex token) and
@@ -104,6 +104,6 @@ impl FromStr for RestFormat {
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let (lines, variables) = parse_lines(text)?;
         // TODO: Figure out flavor
-        Ok(Self::from_lines(lines, variables, RestFlavor::Vscode)?)
+        Self::from_lines(lines, variables, RestFlavor::Vscode)
     }
 }
