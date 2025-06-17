@@ -36,7 +36,8 @@ pub enum RestFlavor {
 }
 
 impl RestFlavor {
-    pub(crate) fn from_path(path: impl AsRef<Path>) -> Self {
+    /// Determine the REST flavor from the extension of a file path.
+    pub fn from_path(path: impl AsRef<Path>) -> Self {
         match path.as_ref().extension() {
             Some(ext) if ext == "http" => Self::Jetbrains,
             Some(ext) if ext == "rest" => Self::Vscode,
